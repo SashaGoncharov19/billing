@@ -29,7 +29,8 @@ export default defineConfig({
         DATABASE_URL: 'postgresql://entityseven:entityseven_dev@localhost:5433/entityseven_test',
         REDIS_URL: 'redis://localhost:6380',
         STRIPE_SECRET_KEY: 'sk_test_123',
-        STRIPE_WEBHOOK_SECRET: 'whsec_123'
+        STRIPE_WEBHOOK_SECRET: 'whsec_123',
+        ALLOWED_ORIGINS: 'http://localhost:3002'
       }
     },
     {
