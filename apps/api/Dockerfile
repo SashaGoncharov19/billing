@@ -7,6 +7,7 @@ COPY package.json bun.lock ./
 COPY packages/db/package.json ./packages/db/
 COPY packages/shared/package.json ./packages/shared/
 COPY apps/api/package.json ./apps/api/
+COPY apps/web/package.json ./apps/web/
 
 # Install exact node modules via bun
 RUN bun install --frozen-lockfile
