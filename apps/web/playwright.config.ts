@@ -39,7 +39,7 @@ export default defineConfig({
       env: {
         PORT: '3002',
         NODE_ENV: 'test',
-        NEXT_PUBLIC_API_URL: 'http://localhost:3001/api/v1'
+        NEXT_PUBLIC_API_URL: 'http://localhost:3001'
       }
     }
   ],
