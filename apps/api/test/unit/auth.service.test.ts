@@ -14,11 +14,11 @@ describe('AuthService', () => {
       const result = await AuthService.register({
         email: 'test@example.com',
         password: 'SecurePass123!',
-        name: 'Test',
+        tenantName: 'Test',
       })
 
       expect(result.user.email).toBe('test@example.com')
-      expect(result.tenant.name).toBe("Test's Workspace")
+      expect(result.tenant.name).toBe("Test")
       
       const userResult = await testDb.select().from(users).where(eq(users.email, 'test@example.com')).limit(1)
       const user = userResult[0]
@@ -27,17 +27,17 @@ describe('AuthService', () => {
     })
 
     it('throws CONFLICT if email already exists', async () => {
-      await AuthService.register({ email: 'duplicate@example.com', password: 'Pass123!', name: 'First' })
+      await AuthService.register({ email: 'duplicate@example.com', password: 'Pass123!', tenantName: 'First' })
 
       await expect(
-        AuthService.register({ email: 'duplicate@example.com', password: 'Different!', name: 'Second' })
+        AuthService.register({ email: 'duplicate@example.com', password: 'Different!', tenantName: 'Second' })
       ).rejects.toThrow('Email already exists')
     })
   })
 
   describe('login', () => {
     it('returns user on valid credentials', async () => {
-      await AuthService.register({ email: 'login@example.com', password: 'ValidPass123!', name: 'Login' })
+      await AuthService.register({ email: 'login@example.com', password: 'ValidPass123!', tenantName: 'Login' })
       const user = await AuthService.login('login@example.com', 'ValidPass123!')
 
       expect(user.email).toBe('login@example.com')

@@ -21,10 +21,10 @@ export class AuthService {
       }).returning()
 
       // 2. Create Personal Tenant
-      const slugBase = input.name.toLowerCase().replace(/[^a-z0-9]/g, '-')
+      const slugBase = input.tenantName.toLowerCase().replace(/[^a-z0-9]/g, '-')
       const slug = `${slugBase}-${Date.now().toString().slice(-4)}`
       const [newTenant] = await tx.insert(tenants).values({
-        name: `${input.name}'s Workspace`,
+        name: input.tenantName,
         slug: slug
       }).returning()
 

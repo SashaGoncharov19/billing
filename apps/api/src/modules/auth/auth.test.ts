@@ -52,7 +52,7 @@ describe('AuthService', () => {
         tenant: { id: 'tnt_1', slug: 'test-slug' }
       } as never)
       
-      const res = await AuthService.register({ email: 'test@example.com', password: 'secure', name: 'Test' })
+      const res = await AuthService.register({ email: 'test@example.com', password: 'secure', tenantName: 'Test' })
       expect(res.user.id).toBe('usr_1')
       expect(res.tenant.id).toBe('tnt_1')
     })
@@ -63,7 +63,7 @@ describe('AuthService', () => {
         from: () => ({ where: () => ({ limit: async () => [{ id: 'usr_existent' }] }) })
       } as never)
 
-      expect(AuthService.register({ email: 'exists@example.com', password: 'pw', name: 'N' }))
+      expect(AuthService.register({ email: 'exists@example.com', password: 'pw', tenantName: 'N' }))
         .rejects.toMatchObject({ code: 'CONFLICT' })
     })
 
@@ -130,7 +130,7 @@ describe('Auth API', () => {
     const req = new Request('http://localhost/api/v1/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'test@t.com', password: 'password123', name: 'John' })
+      body: JSON.stringify({ email: 'test@t.com', password: 'password123', tenantName: 'John' })
     })
 
     const res = await app.handle(req)
@@ -192,7 +192,7 @@ describe('Auth API', () => {
     const regReq = new Request('http://localhost/api/v1/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'me@example.com', password: 'password123', name: 'MeTest' })
+      body: JSON.stringify({ email: 'me@example.com', password: 'password123', tenantName: 'MeTest' })
     })
     
     const regRes = await app.handle(regReq)
@@ -227,7 +227,7 @@ describe('Auth API', () => {
     const regReq = new Request('http://localhost/api/v1/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'ref@example.com', password: 'password123', name: 'RefTest' })
+      body: JSON.stringify({ email: 'ref@example.com', password: 'password123', tenantName: 'RefTest' })
     })
     const regRes = await app.handle(regReq)
     const setCookie = regRes.headers.get('set-cookie') as string
@@ -253,7 +253,7 @@ describe('Auth API', () => {
     const regReq = new Request('http://localhost/api/v1/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'log@example.com', password: 'password123', name: 'Log' })
+      body: JSON.stringify({ email: 'log@example.com', password: 'password123', tenantName: 'Log' })
     })
     const regRes = await app.handle(regReq)
     const { accessToken } = await regRes.json()
