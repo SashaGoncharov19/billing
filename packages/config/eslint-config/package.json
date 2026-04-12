@@ -1,0 +1,10 @@
+{
+  "name": "@entityseven/eslint-config",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "eslint": "latest",
+    "@typescript-eslint/eslint-plugin": "latest",
+    "@typescript-eslint/parser": "latest"
+  }
+}

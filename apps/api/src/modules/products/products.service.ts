@@ -1,0 +1,91 @@
+import { db, products } from '@entityseven/db'
+import { eq, and, isNull } from 'drizzle-orm'
+import Stripe from 'stripe'
+
+export class ProductsService {
+  private stripe: Stripe | null = null
+
+  constructor() {
+    if (process.env.STRIPE_SECRET_KEY) {
+      this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+        apiVersion: '2026-03-25.dahlia',
+      })
+    }
+  }
+
+  async listProducts(tenantId: string) {
+    return db.query.products.findMany({
+      where: and(
+        eq(products.tenantId, tenantId),
+        isNull(products.deletedAt)
+      )
+    })
+  }
+
+  async createProduct(tenantId: string, data: { name: string; description?: string; price: string; currency?: string; billingType: 'one_time' | 'recurring'; billingInterval?: 'month' | 'year' }) {
+    // Basic product creation logic. If recurring we might sync to Stripe here.
+    // In many SaaS, products are global but here SPEC says tenant-scoped.
+    let stripeProductId = null
+    let stripePriceId = null
+
+    if (this.stripe && data.billingType === 'recurring') {
+      const productParams: Stripe.ProductCreateParams = {
+        name: data.name,
+        metadata: { tenantId }
+      }
+      if (data.description !== undefined) {
+        productParams.description = data.description
+      }
+      
+      const sp = await this.stripe.products.create(productParams)
+      stripeProductId = sp.id
+
+      const price = await this.stripe.prices.create({
+        product: sp.id,
+        unit_amount: Math.round(parseFloat(data.price) * 100),
+        currency: data.currency || 'usd',
+        recurring: { interval: data.billingInterval || 'month' },
+      })
+      stripePriceId = price.id
+    }
+
+    const [newProduct] = await db.insert(products).values({
+      tenantId,
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      currency: data.currency || 'USD',
+      billingType: data.billingType,
+      billingInterval: data.billingInterval,
+      stripeProductId,
+      stripePriceId,
+    }).returning()
+
+    return newProduct
+  }
+
+  async updateProduct(tenantId: string, productId: string, data: { name?: string; description?: string; isActive?: boolean }) {
+     const [updated] = await db.update(products)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(products.id, productId),
+        eq(products.tenantId, tenantId)
+      ))
+      .returning()
+    return updated
+  }
+
+  async deleteProduct(tenantId: string, productId: string) {
+    const [deleted] = await db.update(products)
+      .set({ deletedAt: new Date() })
+      .where(and(
+        eq(products.id, productId),
+        eq(products.tenantId, tenantId)
+      ))
+      .returning()
+    return deleted
+  }
+}

@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: entityseven
+          POSTGRES_PASSWORD: entityseven_dev
+          POSTGRES_DB: entityseven_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6380:6379
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install Node.js Dependencies (for Next.js/Playwright)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run Database Migrations
+        env:
+          DATABASE_URL: postgresql://entityseven:entityseven_dev@localhost:5433/entityseven_test
+        run: bun run --cwd packages/db migrate
+
+      - name: Type Check (TypeScript strict verification)
+        run: bun run type-check
+
+      - name: Run Backend Tests (Unit & Integration)
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://entityseven:entityseven_dev@localhost:5433/entityseven_test
+          REDIS_URL: redis://localhost:6380
+          STRIPE_SECRET_KEY: sk_test_123
+        run: bun run --cwd apps/api test --coverage
+
+      - name: Install Playwright Browsers
+        run: bunx playwright install --with-deps
+
+      - name: Run E2E Tests
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://entityseven:entityseven_dev@localhost:5433/entityseven_test
+          REDIS_URL: redis://localhost:6380
+          STRIPE_SECRET_KEY: sk_test_123
+        run: bun run --cwd apps/web e2e
+             
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 10

@@ -1,0 +1,21 @@
+{
+  "name": "@entityseven/db",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "db:push": "drizzle-kit push",
+    "db:seed": "bun run src/seed.ts",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "drizzle-orm": "latest",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/pg": "^8.20.0",
+    "drizzle-kit": "latest"
+  }
+}

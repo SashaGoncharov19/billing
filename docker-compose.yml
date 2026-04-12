@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  api:
+    image: ${DOCKER_REGISTRY:-entityseven}/entityseven-api:latest
+    restart: always
+    env_file: .env
+    depends_on:
+      - db
+      - redis
+    # The API runs on 3001 internally
+
+  web:
+    image: ${DOCKER_REGISTRY:-entityseven}/entityseven-web:latest
+    restart: always
+    env_file: .env
+    # Next.js runs on 3000 internally
+
+  worker:
+    image: ${DOCKER_REGISTRY:-entityseven}/entityseven-api:latest
+    command: bun run src/worker.ts
+    restart: always
+    env_file: .env
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx:/etc/nginx/conf.d
+    depends_on:
+      - api
+      - web
+
+volumes:
+  db_data:
