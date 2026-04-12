@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   api:
-    image: ${DOCKER_REGISTRY:-entityseven}/entityseven-api:latest
+    image: ${DOCKER_IMAGE_API:-ghcr.io/entityseven/entityseven-api:latest}
     restart: always
     env_file: .env
     depends_on:
@@ -11,13 +11,13 @@ services:
     # The API runs on 3001 internally
 
   web:
-    image: ${DOCKER_REGISTRY:-entityseven}/entityseven-web:latest
+    image: ${DOCKER_IMAGE_WEB:-ghcr.io/entityseven/entityseven-web:latest}
     restart: always
     env_file: .env
     # Next.js runs on 3000 internally
 
   worker:
-    image: ${DOCKER_REGISTRY:-entityseven}/entityseven-api:latest
+    image: ${DOCKER_IMAGE_API:-ghcr.io/entityseven/entityseven-api:latest}
     command: bun run src/worker.ts
     restart: always
     env_file: .env

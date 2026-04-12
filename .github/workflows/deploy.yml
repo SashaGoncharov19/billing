@@ -7,8 +7,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME_API: ${{ github.repository }}-api
-  IMAGE_NAME_WEB: ${{ github.repository }}-web
 
 jobs:
   build-and-push:
@@ -20,6 +18,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        
+      - name: Prepare lowercase strings
+        id: strings
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
 
       - name: Log in to the Container registry
         uses: docker/login-action@v3
@@ -32,7 +34,7 @@ jobs:
         id: meta-api
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_API }}
+          images: ${{ env.REGISTRY }}/${{ steps.strings.outputs.owner }}/entityseven-api
           tags: |
             type=sha,format=long
             type=raw,value=latest
@@ -41,7 +43,7 @@ jobs:
         id: meta-web
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_WEB }}
+          images: ${{ env.REGISTRY }}/${{ steps.strings.outputs.owner }}/entityseven-web
           tags: |
             type=sha,format=long
             type=raw,value=latest
@@ -68,6 +70,10 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
+      - name: Prepare lowercase strings
+        id: strings
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
+        
       - name: Execute Remote SSH Deployment
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -75,7 +81,10 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            export DOCKER_REGISTRY=ghcr.io/${{ github.repository_owner }}
+            export DOCKER_IMAGE_API=${{ env.REGISTRY }}/${{ steps.strings.outputs.owner }}/entityseven-api:latest
+            export DOCKER_IMAGE_WEB=${{ env.REGISTRY }}/${{ steps.strings.outputs.owner }}/entityseven-web:latest
             cd /app
+            # Optional login to registry if your packages are private
+            # echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull
             docker compose up -d
