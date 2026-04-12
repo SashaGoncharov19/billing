@@ -66,25 +66,3 @@ jobs:
           tags: ${{ steps.meta-web.outputs.tags }}
           labels: ${{ steps.meta-web.outputs.labels }}
 
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Prepare lowercase strings
-        id: strings
-        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> $GITHUB_OUTPUT
-        
-      - name: Execute Remote SSH Deployment
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            export DOCKER_IMAGE_API=${{ env.REGISTRY }}/${{ steps.strings.outputs.owner }}/entityseven-api:latest
-            export DOCKER_IMAGE_WEB=${{ env.REGISTRY }}/${{ steps.strings.outputs.owner }}/entityseven-web:latest
-            cd /app
-            # Optional login to registry if your packages are private
-            # echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose pull
-            docker compose up -d
