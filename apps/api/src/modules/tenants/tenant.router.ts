@@ -7,7 +7,7 @@ import {
   uploadLogoSchema, inviteMemberSchema, updateMemberRoleSchema
 } from './tenant.schema'
 
-export const tenantRouter = new Elysia({ prefix: '/api/v1/tenants', name: 'tenant.router' })
+export const tenantRouter = new Elysia({ prefix: '/tenants', name: 'tenant.router' })
   .use(authenticate)
   // Endpoint to create a new tenant (No tenant context needed yet)
   .post('/', async ({ body, user, set }) => {

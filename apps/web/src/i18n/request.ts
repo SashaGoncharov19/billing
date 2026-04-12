@@ -2,15 +2,20 @@ import { getRequestConfig } from 'next-intl/server'
 import { cookies, headers } from 'next/headers'
 
 export default getRequestConfig(async () => {
-  // Provide a static locale, fetch from user, or negotiate from accept-language header
   let locale = 'en'
-  const acceptedLanguages = (await headers()).get('accept-language')
-  const cookieLocale = (await cookies()).get('NEXT_LOCALE')?.value
-  
-  if (cookieLocale) {
-    locale = cookieLocale
-  } else if (acceptedLanguages && acceptedLanguages.includes('uk')) {
-    locale = 'uk'
+
+  try {
+    // headers() and cookies() throw during static generation (build time)
+    const cookieLocale = (await cookies()).get('NEXT_LOCALE')?.value
+    const acceptedLanguages = (await headers()).get('accept-language')
+
+    if (cookieLocale) {
+      locale = cookieLocale
+    } else if (acceptedLanguages?.includes('uk')) {
+      locale = 'uk'
+    }
+  } catch {
+    // Fallback to default during static generation
   }
 
   return {

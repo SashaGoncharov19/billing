@@ -57,19 +57,24 @@ export const app = new Elysia()
 
   .get('/metrics', () => getMetrics()) // Private endpoints later guarded by proxy/ip
 
-  .use(authRouter)
-  .use(tenantRouter)
-  .use(billingRouter)
-  .use(productsRouter)
-  .use(invoiceRouter)
-  .use(ticketRouter)
+  .group('/api/v1', (router) => {
+    return router
+      .use(authRouter)
+      .use(tenantRouter)
+      .use(billingRouter)
+      .use(productsRouter)
+      .use(invoiceRouter)
+      .use(ticketRouter)
+  })
 
-  .use(adminRouter) 
+  .use(adminRouter);
 
-  // Bull MQ Dashboard
-  .use((app) => process.env.NODE_ENV === 'test' ? app : app.use(bullBoard.registerPlugin()))
 
-  .listen(config.API_PORT)
+if (process.env.NODE_ENV !== 'test') {
+  app.use(bullBoard.registerPlugin())
+}
+
+app.listen(config.API_PORT)
 
 logger.info(`🚀 Entity Seven API running at http://localhost:${config.API_PORT}`)
 logger.info(`📚 API docs: http://localhost:${config.API_PORT}/docs`)

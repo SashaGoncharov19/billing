@@ -6,7 +6,7 @@ import { resolveTenant } from '../../middleware/tenant'
 import { getPaymentProvider } from '../../providers/provider.factory'
 import { webhookQueue } from '../../queue/index'
 
-export const billingRouter = new Elysia({ prefix: '/api/v1/billing' })
+export const billingRouter = new Elysia({ prefix: '/billing' })
   .use(authenticate)
   .use(resolveTenant)
   .decorate('billingService', new BillingService())

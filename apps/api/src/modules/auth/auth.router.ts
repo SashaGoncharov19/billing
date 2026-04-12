@@ -8,7 +8,7 @@ import { authenticate } from '../../middleware/authenticate'
 import { db, memberships, tenants, users, auditLogs } from '@entityseven/db'
 import { eq } from 'drizzle-orm'
 
-export const authRouter = new Elysia({ prefix: '/api/v1/auth' })
+export const authRouter = new Elysia({ prefix: '/auth' })
   .use(jwtSetup)
   .post('/register', async ({ body, accessJwt, refreshJwt, cookie: { __refresh_token }, set, status }) => {
     try {

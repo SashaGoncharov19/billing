@@ -4,7 +4,7 @@ import { CreateProductDto, UpdateProductDto } from './products.schema'
 import { authenticate } from '../../middleware/authenticate'
 import { resolveTenant } from '../../middleware/tenant'
 
-export const productsRouter = new Elysia({ prefix: '/api/v1/products' })
+export const productsRouter = new Elysia({ prefix: '/products' })
   .use(authenticate)
   .use(resolveTenant)
   .decorate('productsService', new ProductsService())

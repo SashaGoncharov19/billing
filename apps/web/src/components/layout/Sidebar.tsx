@@ -28,7 +28,7 @@ export function Sidebar({ className }: { className?: string }) {
       </div>
       <div className="p-4 flex-1 space-y-1">
         {navItems.map(item => {
-          const isActive = pathname.startsWith(item.href)
+          const isActive = pathname?.startsWith(item.href) ?? false
           const Icon = item.icon
           return (
             <Link

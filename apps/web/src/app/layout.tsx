@@ -6,8 +6,11 @@ import { getMessages } from 'next-intl/server'
 import { ThemeProvider } from '@/components/layout/ThemeProvider'
 import { TenantProvider } from '@/components/layout/TenantProvider'
 import { QueryClientProvider } from '@/components/layout/QueryClientProvider'
-
 import { cn } from '@/lib/utils'
+
+// Force all pages to be dynamically rendered — prevents static generation
+// which fails on Bun Linux ARM64 due to Error.stack undefined bug
+export const dynamic = 'force-dynamic'
 
 const inter = Inter({ subsets: ['latin'] })
 

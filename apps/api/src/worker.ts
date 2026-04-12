@@ -1,14 +1,24 @@
-import { eq } from 'drizzle-orm'
-import { db } from '@entityseven/db'
+import { logger } from './lib/logger'
 
-// Import queue workers once configured
-// import { emailWorker } from './queue/workers/email.worker'
+// Import all queue workers — their BullMQ connections keep the process alive
+import './queue/workers/email.worker'
+import './queue/workers/pdf.worker'
+import './queue/workers/webhook.worker'
+import './queue/workers/dlq.worker'
+import { initScheduler } from './queue/workers/scheduler.worker'
 
-console.log('🚀 Entity Seven Worker Instance Started')
+logger.info('🚀 Entity Seven Worker Instance Started')
 
-// Placeholder for queue workers initialization
-// Make sure this keeps the process alive
+initScheduler().catch((e) => {
+  logger.error({ error: e }, 'Failed to init scheduler')
+})
+
 process.on('SIGINT', () => {
-    console.log('Shutting down worker process...')
-    process.exit(0)
+  logger.info('Shutting down worker process...')
+  process.exit(0)
+})
+
+process.on('SIGTERM', () => {
+  logger.info('Shutting down worker process...')
+  process.exit(0)
 })

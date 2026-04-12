@@ -4,7 +4,7 @@ import { CreateInvoiceDto, UpdateInvoiceDto, QueryInvoicesDto } from './invoice.
 import { authenticate } from '../../middleware/authenticate'
 import { resolveTenant } from '../../middleware/tenant'
 
-export const invoiceRouter = new Elysia({ prefix: '/api/v1/invoices' })
+export const invoiceRouter = new Elysia({ prefix: '/invoices' })
   .use(authenticate)
   .use(resolveTenant)
   .decorate('invoiceService', new InvoiceService())

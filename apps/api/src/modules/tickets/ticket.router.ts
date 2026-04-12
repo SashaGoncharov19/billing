@@ -4,7 +4,7 @@ import { CreateTicketDto, UpdateTicketDto, CreateCommentDto, QueryTicketsDto } f
 import { authenticate } from '../../middleware/authenticate'
 import { resolveTenant } from '../../middleware/tenant'
 
-export const ticketRouter = new Elysia({ prefix: '/api/v1/tickets' })
+export const ticketRouter = new Elysia({ prefix: '/tickets' })
   .use(authenticate)
   .use(resolveTenant)
   .decorate('ticketService', new TicketService())
