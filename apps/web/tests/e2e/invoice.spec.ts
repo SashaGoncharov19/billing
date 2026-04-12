@@ -8,7 +8,6 @@ test.describe('Invoice Flow', () => {
 
     // Register a user first to have a dashboard
     await page.goto('/register')
-    await page.fill('input[name="name"]', 'Invoice User')
     await page.fill('input[name="email"]', 'invoices@entityseven.com')
     await page.fill('input[name="password"]', 'Password123!')
     await page.fill('input[name="tenantName"]', 'Invoice Corp')

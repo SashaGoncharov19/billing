@@ -13,7 +13,6 @@ test.describe('Authentication Flow', () => {
     await page.goto('/register')
     
     // Fill form
-    await page.fill('input[name="name"]', 'Playwright User')
     await page.fill('input[name="email"]', 'playwright@entityseven.com')
     await page.fill('input[name="password"]', 'Password123!')
     await page.fill('input[name="tenantName"]', 'Playwright Corp')
