@@ -22,6 +22,7 @@ export default defineConfig({
     {
       command: 'bun run --cwd ../api dev --port=3001',
       url: 'http://localhost:3001/health',
+      timeout: 120000,
       reuseExistingServer: !process.env.CI,
       env: {
         PORT: '3001',
@@ -36,6 +37,7 @@ export default defineConfig({
     {
       command: 'bun run dev --port=3002',
       url: 'http://localhost:3002',
+      timeout: 120000,
       reuseExistingServer: !process.env.CI,
       env: {
         PORT: '3002',

@@ -12,7 +12,12 @@ export default function InvoicesPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">{navT('invoices')}</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">{navT('invoices')}</h1>
+        <Button asChild>
+          <a href="/dashboard/invoices/new">Create Invoice</a>
+        </Button>
+      </div>
       
       <div className="rounded-md border bg-card">
         <Table>

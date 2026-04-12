@@ -39,8 +39,6 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      // не зберігати user data (буде refetch'итися/перевірятися через /auth/me або middleware)
-      partialize: (state) => ({ accessToken: state.accessToken }),  
     }
   )
 )

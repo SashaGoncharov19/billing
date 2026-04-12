@@ -25,7 +25,8 @@ test.describe('Authentication Flow', () => {
     await expect(page.locator('text=Playwright Corp').first()).toBeVisible()
 
     // Logout
-    await page.click('button:has-text("Logout"), a:has-text("Logout"), [aria-label="Logout"]')
+    await page.locator('header').locator('button.rounded-full').click() // Ensure we hit the Avatar specifically
+    await page.getByText('Sign Out').click()
     // Depending on UI, fallback:
     if (page.url().includes('dashboard')) {
         await page.goto('/logout') // or similar logout action

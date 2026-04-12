@@ -36,6 +36,7 @@ export const authRouter = new Elysia({ prefix: '/api/v1/auth' })
       set.status = 201
       return {
         user: { id: user.id, email: user.email },
+        tenant,
         accessToken,
         expiresIn: 900
       }
@@ -53,16 +54,21 @@ export const authRouter = new Elysia({ prefix: '/api/v1/auth' })
       const user = await AuthService.login(body.email, body.password)
       
       // Get first tenant for payload
-      const [membership] = await db.select({
+      const [membershipWithTenant] = await db.select({
         tenantId: memberships.tenantId,
-        role: memberships.role
-      }).from(memberships).where(eq(memberships.userId, user.id)).limit(1)
+        role: memberships.role,
+        tenant: tenants
+      })
+      .from(memberships)
+      .innerJoin(tenants, eq(memberships.tenantId, tenants.id))
+      .where(eq(memberships.userId, user.id))
+      .limit(1)
 
       const accessToken = await accessJwt.sign({
         sub: user.id,
         email: user.email,
-        tenantId: membership?.tenantId,
-        role: membership?.role
+        tenantId: membershipWithTenant?.tenantId,
+        role: membershipWithTenant?.role
       })
       
       const refreshToken = await refreshJwt.sign({
@@ -84,6 +90,7 @@ export const authRouter = new Elysia({ prefix: '/api/v1/auth' })
           theme: user.theme, 
           preferredLanguage: user.preferredLanguage 
         },
+        tenant: membershipWithTenant?.tenant ?? null,
         accessToken,
         expiresIn: 900
       }
