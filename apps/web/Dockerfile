@@ -38,7 +38,7 @@ RUN adduser --system --uid 1001 nextjs
 # Note Next standalone puts things in /app/apps/web/.next/standalone relative to monorepo root
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/apps/web/publi[c] ./apps/web/public
 
 USER nextjs
 

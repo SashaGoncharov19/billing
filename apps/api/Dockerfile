@@ -27,4 +27,4 @@ ENV PORT 3001
 
 EXPOSE 3001
 
-CMD ["bun", "run", "src/index.ts"]
+CMD ["sh", "-c", "bun run --cwd ../../packages/db db:migrate && bun run src/index.ts"]
