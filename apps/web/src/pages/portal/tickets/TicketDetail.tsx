@@ -97,12 +97,13 @@ export default function TicketDetail() {
         </div>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="flex-1 min-h-0 bg-card border border-border/50 shadow-sm rounded-2xl flex flex-col overflow-hidden"
-      >
+      <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="flex-1 min-w-0 bg-card border border-border/50 shadow-sm rounded-2xl flex flex-col overflow-hidden"
+        >
         {/* Messages History (Scrollable) */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           <div className="text-center">
@@ -322,6 +323,54 @@ export default function TicketDetail() {
           )}
         </div>
       </motion.div>
+
+      {isAdmin && ticket.createdByUser && (
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.15 }}
+          className="w-full lg:w-72 shrink-0 bg-card border border-border/50 shadow-sm rounded-2xl p-5 overflow-y-auto"
+        >
+          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/50">
+            <UserIcon size={18} className="text-primary"/>
+            <h3 className="font-semibold text-sm">User Details</h3>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <span className="text-xs uppercase text-muted-foreground font-semibold tracking-wider block mb-1">Email / ID</span>
+              <div className="font-medium text-sm break-all">{ticket.createdByUser.email}</div>
+              <div className="text-xs text-muted-foreground font-mono mt-0.5">{ticket.createdByUser.id}</div>
+            </div>
+
+            {(ticket.createdByUser.billingName || ticket.createdByUser.billingCountry) && (
+              <div>
+                <span className="text-xs uppercase text-muted-foreground font-semibold tracking-wider block mb-1">Billing File</span>
+                <div className="text-sm">{ticket.createdByUser.billingName || 'N/A'}</div>
+                <div className="text-sm text-muted-foreground">{ticket.createdByUser.billingCountry || 'N/A'}</div>
+              </div>
+            )}
+            
+            <div className="pt-4 border-t border-border/50 space-y-2">
+              <Link 
+                to={`/admin/users/${ticket.createdByUserId}`}
+                className="w-full flex items-center justify-between p-2 rounded-lg bg-muted text-sm font-medium hover:bg-muted/80 transition-colors text-foreground"
+              >
+                View Full Profile
+                <ArrowLeft size={14} className="rotate-180" />
+              </Link>
+              <Link 
+                to="/admin/invoices"
+                className="w-full flex items-center justify-between p-2 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
+              >
+                Global Invoices
+                <ArrowLeft size={14} className="rotate-180" />
+              </Link>
+            </div>
+          </div>
+        </motion.div>
+      )}
+      </div>
     </div>
   )
 }

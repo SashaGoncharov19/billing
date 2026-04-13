@@ -29,7 +29,6 @@ export default function AdminProducts() {
     description: '',
     price: '',
     currency: 'usd',
-    taxRate: '0',
     billingType: 'one_time',
     billingInterval: 'month',
     pluginType: '',
@@ -45,7 +44,6 @@ export default function AdminProducts() {
       description: product.description || '',
       price: product.price.toString(),
       currency: product.currency || 'usd',
-      taxRate: product.taxRate ? (Number(product.taxRate) * 100).toString() : '0',
       billingType: product.billingType,
       billingInterval: product.billingInterval || 'month',
       pluginType: product.pluginType || '',
@@ -64,7 +62,7 @@ export default function AdminProducts() {
   const openNewModal = () => {
     setEditingId(null)
     setFormData({
-      name: '', description: '', price: '', currency: 'usd', taxRate: '0', billingType: 'one_time', billingInterval: 'month', pluginType: '', pluginConfigTemplateId: ''
+      name: '', description: '', price: '', currency: 'usd', billingType: 'one_time', billingInterval: 'month', pluginType: '', pluginConfigTemplateId: ''
     })
     setIsModalOpen(true)
   }
@@ -92,14 +90,10 @@ export default function AdminProducts() {
     }
 
     if (editingId) {
-      if (formData.taxRate !== undefined && formData.taxRate !== '') {
-         payload.taxRate = parseFloat(formData.taxRate) / 100
-      }
       await updateProduct.mutateAsync({ id: editingId, tenantId: tenant.id, payload })
     } else {
       payload.price = parseFloat(formData.price)
       payload.currency = formData.currency
-      payload.taxRate = formData.taxRate ? parseFloat(formData.taxRate) / 100 : 0
       payload.billingType = formData.billingType
       if (formData.billingType === 'recurring') {
         payload.billingInterval = formData.billingInterval
@@ -110,7 +104,7 @@ export default function AdminProducts() {
     setIsModalOpen(false)
     setEditingId(null)
     setFormData({
-      name: '', description: '', price: '', currency: 'usd', taxRate: '0', billingType: 'one_time', billingInterval: 'month', pluginType: '', pluginConfigTemplateId: ''
+      name: '', description: '', price: '', currency: 'usd', billingType: 'one_time', billingInterval: 'month', pluginType: '', pluginConfigTemplateId: ''
     })
   }
 
@@ -247,20 +241,6 @@ export default function AdminProducts() {
                          ))}
                       </select>
                     </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Tax Percentage (%)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="100"
-                      value={formData.taxRate}
-                      onChange={(e) => setFormData(p => ({ ...p, taxRate: e.target.value }))}
-                      className="w-full p-2 rounded-md border bg-background"
-                      placeholder="e.g. 20"
-                    />
                   </div>
 
                   <div className="space-y-2">

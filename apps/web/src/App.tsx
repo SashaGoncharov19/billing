@@ -30,6 +30,9 @@ import AdminTickets from './pages/admin/AdminTickets'
 import AdminProducts from './pages/admin/AdminProducts'
 import AdminCurrencies from './pages/admin/AdminCurrencies'
 import AdminPaymentMethods from './pages/admin/AdminPaymentMethods'
+import AdminTaxes from './pages/admin/AdminTaxes'
+import AdminUsersList from './pages/admin/AdminUsersList'
+import AdminUserDetail from './pages/admin/AdminUserDetail'
 
 import AdminSettings from './pages/admin/AdminSettings'
 import AdminInvoices from './pages/admin/AdminInvoices'
@@ -76,6 +79,9 @@ function App() {
           <Route path="products" element={<AdminProducts />} />
           <Route path="currencies" element={<AdminCurrencies />} />
           <Route path="payment-methods" element={<AdminPaymentMethods />} />
+          <Route path="taxes" element={<AdminTaxes />} />
+          <Route path="users" element={<AdminUsersList />} />
+          <Route path="users/:id" element={<AdminUserDetail />} />
           <Route path="settings" element={<AdminSettings />} />
           <Route path="invoices" element={<AdminInvoices />} />
         </Route>
@@ -95,7 +101,7 @@ function App() {
           
           <Route path="shop" element={<ShopList />} />
           <Route path="shop/:id" element={<ProductDetail />} />
-          <Route path="shop/checkout/:id" element={<Checkout />} />
+          <Route path="checkout" element={<Checkout />} />
           
           <Route path="settings" element={<AccountBillingProfile />} />
         </Route>

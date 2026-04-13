@@ -48,6 +48,18 @@ export async function uploadInvoicePdf(tenantId: string, invoiceId: string, pdfB
   }
 }
 
+export async function deleteInvoicePdf(tenantId: string, invoiceId: string): Promise<void> {
+  const key = `invoices/${tenantId}/${invoiceId}.pdf`
+  try {
+    const exists = await s3.exists(key)
+    if (exists) {
+      await s3.delete(key)
+    }
+  } catch (error) {
+    console.error('Failed to delete PDF:', error)
+  }
+}
+
 export function getInvoiceSignedUrl(key: string, expiresIn = 3600): string {
   // Bun.S3 presign natively
   const url = s3.presign(key, { expiresIn })

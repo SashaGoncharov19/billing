@@ -1,12 +1,28 @@
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useStoreProduct } from '@/lib/api-store'
 import { motion } from 'framer-motion'
-import { ArrowLeft, CheckCircle2, ShieldCheck, Zap, Loader2 } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ShieldCheck, Zap, Loader2, ShoppingCart } from 'lucide-react'
+import { useCartStore } from '@/store/cart.store'
+import { toast } from 'sonner'
 
 export default function ProductDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { data: product, isLoading } = useStoreProduct(id || '')
+  const addToCart = useCartStore(state => state.addItem)
+
+  const handleAddToCart = () => {
+    if (!product) return
+    addToCart({
+      productId: product.id,
+      name: product.name,
+      price: String(product.price),
+      billingType: product.billingType,
+      quantity: 1
+    })
+    toast.success(`${product.name} added to cart`)
+    navigate('/shop')
+  }
 
   if (isLoading) {
     return (
@@ -97,12 +113,12 @@ export default function ProductDetail() {
               </div>
             </div>
 
-            <Link 
-              to={`/shop/checkout/${product.id}`}
+            <button 
+              onClick={handleAddToCart}
               className="bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-[1.02] shadow-xl shadow-primary/20 transition-all font-bold text-lg w-full py-4 rounded-xl flex items-center justify-center gap-2"
             >
-              Proceed to Checkout <ArrowLeft size={20} className="rotate-180" />
-            </Link>
+              Add to Cart <ShoppingCart size={20} />
+            </button>
           </div>
         </motion.div>
       </div>

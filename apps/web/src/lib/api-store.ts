@@ -53,11 +53,9 @@ export const useStoreCurrencies = () => {
 
 export const useCheckoutMutation = () => {
   return useMutation({
-    mutationFn: async (payload: { productId: string, paymentMethod: string, successUrl: string, cancelUrl: string }) => {
-      // payload.paymentMethod might be read to switch endpoints if we support multiple methods.
-      // Currently, we map to the standard Stripe billing checkout endpoint for CC.
-      const { data } = await api.post<{ url: string }>('/billing/checkout', {
-        productId: payload.productId,
+    mutationFn: async (payload: { items: { productId: string, quantity: number }[], paymentMethod: string, successUrl: string, cancelUrl: string }) => {
+      const { data } = await api.post<{ url?: string; error?: string; message?: string }>('/billing/checkout', {
+        items: payload.items,
         successUrl: payload.successUrl,
         cancelUrl: payload.cancelUrl
       })
@@ -68,8 +66,8 @@ export const useCheckoutMutation = () => {
 
 export const useManualCheckoutMutation = () => {
   return useMutation({
-    mutationFn: async (payload: { productId: string, paymentMethodId: string, currencyId?: string }) => {
-      const { data } = await api.post<{ invoiceId: string }>('/billing/manual-checkout', payload)
+    mutationFn: async (payload: { items: { productId: string, quantity: number }[], paymentMethodId: string, currencyId?: string }) => {
+      const { data } = await api.post<{ invoiceId?: string; error?: string; message?: string }>('/billing/manual-checkout', payload)
       return data
     }
   })

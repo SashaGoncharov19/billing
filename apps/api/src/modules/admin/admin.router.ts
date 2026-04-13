@@ -1,13 +1,14 @@
 import { Elysia, t } from 'elysia'
 import { db } from '@entityseven/db'
 import { tenants, users, auditLogs, invoices, tickets, subscriptions, memberships, products } from '@entityseven/db'
-import { eq, count, sum, desc } from 'drizzle-orm'
+import { eq, count, sum, desc, isNull, and } from 'drizzle-orm'
 import { authenticate } from '../../middleware/authenticate'
 import { ForbiddenError } from '../../middleware/error-handler'
 import { PluginManager } from '../plugins/plugin.manager'
 import { ProductsService } from '../products/products.service'
 import { currencyRouter } from './currency.router'
 import { paymentMethodsRouter } from './payment-methods.router'
+import { taxRatesRouter } from './tax-rates.router'
 
 export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.router' })
   .use(authenticate)
@@ -61,8 +62,51 @@ export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.ro
     })
   })
   .get('/users', async () => {
-    const allUsers = await db.select().from(users).orderBy(desc(users.createdAt))
-    return allUsers
+    const allUsers = await db.query.users.findMany({
+      orderBy: [desc(users.createdAt)],
+      with: { memberships: true }
+    })
+    return allUsers.map(u => ({
+      ...u,
+      role: u.memberships?.[0]?.role || 'user'
+    }))
+  })
+  .get('/users/:id', async ({ params: { id } }) => {
+    const userDb = await db.query.users.findFirst({
+      where: eq(users.id, id),
+      with: { memberships: true }
+    })
+    if (!userDb) throw new Error('User not found')
+    
+    const user = {
+      ...userDb,
+      role: userDb.memberships?.[0]?.role || 'user'
+    }
+    
+    // Get invoices by this user
+    const userInvoices = await db.query.invoices.findMany({
+      where: eq(invoices.createdByUserId, id),
+      orderBy: [desc(invoices.createdAt)]
+    })
+    
+    // Get tickets
+    const userTickets = await db.query.tickets.findMany({
+      where: eq(tickets.createdByUserId, id),
+      orderBy: [desc(tickets.createdAt)]
+    })
+    
+    // Get memberships
+    const userMemberships = await db.query.memberships.findMany({
+      where: eq(memberships.userId, id),
+      with: { tenant: true }
+    })
+    
+    return {
+      user,
+      invoices: userInvoices,
+      tickets: userTickets,
+      memberships: userMemberships
+    }
   })
   .get('/audit-logs', async () => {
     const logs = await db.select().from(auditLogs).orderBy(desc(auditLogs.createdAt)).limit(100)
@@ -71,6 +115,41 @@ export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.ro
   .get('/invoices', async () => {
     const items = await db.select().from(invoices).orderBy(desc(invoices.createdAt)).limit(100)
     return items
+  })
+  .patch('/invoices/:id/approve', async ({ params: { id } }) => {
+    const [invoice] = await db.select().from(invoices).where(eq(invoices.id, id))
+    if (!invoice) throw new Error('Invoice not found')
+    
+    // Process approval
+    await db.update(invoices).set({
+      status: 'paid',
+      paidAmount: invoice.totalAmount,
+      paidAt: new Date()
+    }).where(eq(invoices.id, id))
+    
+    // We can also trigger a new PDF generation here if the PDF worker handles existing paid invoices.
+    const { pdfQueue } = await import('../../queue/index')
+    await pdfQueue.add('generate-pdf', {
+      type: 'invoice',
+      data: { tenantId: invoice.tenantId, invoiceId: id }
+    })
+    
+    // Simulate Email Send
+    console.log(`[EMAIL DISPATCH] Mock sending Payment Confirmed email to user for invoice ${id}`)
+    
+    return { success: true }
+  }, {
+    params: t.Object({
+      id: t.String({ format: 'uuid' })
+    })
+  })
+  .delete('/invoices/:id', async ({ params: { id } }) => {
+    await db.delete(invoices).where(eq(invoices.id, id))
+    return { success: true }
+  }, {
+    params: t.Object({
+      id: t.String({ format: 'uuid' })
+    })
   })
   .get('/tickets', async ({ query }) => {
     let q = db.select().from(tickets).$dynamic()
@@ -107,7 +186,7 @@ export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.ro
     return await plugin.getAdminOptions()
   })
   .get('/products', async () => {
-    return await db.select().from(products).orderBy(desc(products.createdAt))
+    return await db.select().from(products).where(isNull(products.deletedAt)).orderBy(desc(products.createdAt))
   })
   .post('/products', async ({ body }) => {
     const productsService = new ProductsService()
@@ -175,4 +254,5 @@ export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.ro
     })
   })
   .use(currencyRouter)
-  .use(paymentMethodsRouter);
+  .use(paymentMethodsRouter)
+  .use(taxRatesRouter);

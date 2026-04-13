@@ -106,6 +106,8 @@ export const adminKeys = {
   currencies: () => [...adminKeys.all, 'currencies'] as const,
   paymentMethods: () => [...adminKeys.all, 'paymentMethods'] as const,
   invoices: () => [...adminKeys.all, 'invoices'] as const,
+  users: () => [...adminKeys.all, 'users'] as const,
+  userDetail: (id: string) => [...adminKeys.all, 'users', id] as const,
   tenant: () => [...adminKeys.all, 'tenant'] as const,
 }
 
@@ -216,6 +218,27 @@ export const useAdminDeleteProduct = () => {
 }
 
 // --- Currencies ---
+
+export const useAdminUsers = () => {
+  return useQuery({
+    queryKey: adminKeys.users(),
+    queryFn: async () => {
+      const { data } = await api.get('/admin/users')
+      return data
+    }
+  })
+}
+
+export const useAdminUserDetail = (id: string) => {
+  return useQuery({
+    queryKey: adminKeys.userDetail(id),
+    queryFn: async () => {
+      const { data } = await api.get(`/admin/users/${id}`)
+      return data
+    },
+    enabled: !!id
+  })
+}
 
 export const useAdminCurrencies = () => {
   return useQuery({
@@ -371,6 +394,79 @@ export const useAdminInvoiceGeneratePdf = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['adminInvoices'] })
       toast.success('Queued PDF generation')
+    }
+  })
+}
+
+export const useAdminApproveInvoice = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.patch(`/admin/invoices/${id}/approve`, {})
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminInvoices'] })
+      toast.success('Invoice approved and marked as paid')
+    }
+  })
+}
+
+export const useAdminDeleteInvoice = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.delete(`/admin/invoices/${id}`)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminInvoices'] })
+      toast.success('Invoice deleted successfully')
+    }
+  })
+}
+
+export interface TaxRate {
+  id: string
+  tenantId: string
+  countryCode: string
+  taxRate: string
+  createdAt: string
+  updatedAt: string
+}
+
+export const useAdminTaxes = () => {
+  return useQuery({
+    queryKey: ['admin', 'taxes'],
+    queryFn: async () => {
+      const { data } = await api.get<TaxRate[]>('/admin/taxes')
+      return data
+    }
+  })
+}
+
+export const useAdminCreateTax = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: { countryCode: string, taxRate: string | number }) => {
+      const { data } = await api.post('/admin/taxes', payload)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'taxes'] })
+    }
+  })
+}
+
+export const useAdminDeleteTax = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.delete(`/admin/taxes/${id}`)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'taxes'] })
     }
   })
 }

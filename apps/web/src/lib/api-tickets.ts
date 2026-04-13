@@ -9,6 +9,8 @@ export interface UserSnippet {
   id: string
   email: string
   role?: string
+  billingName?: string | null
+  billingCountry?: string | null
 }
 
 export interface TicketMessage {
@@ -34,6 +36,7 @@ export interface Ticket {
   updatedAt: string
   assignedToUser?: UserSnippet | null
   createdBy?: UserSnippet
+  createdByUser?: UserSnippet
   comments: TicketMessage[] // Usually provided on detail view
 }
 

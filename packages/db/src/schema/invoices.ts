@@ -18,6 +18,7 @@ export const invoices = pgTable('invoices', {
   pdfUrl: varchar('pdf_url', { length: 2000 }),      // S3/R2 URL
   issuerDetails: jsonb('issuer_details'),            // Frozen tenant snapshot
   recipientDetails: jsonb('recipient_details'),      // Frozen user snapshot
+  paymentMethod: varchar('payment_method', { length: 255 }), // Snapshot of payment method
   createdByUserId: uuid('created_by_user_id').references(() => users.id),
   issuedAt: timestamp('issued_at', { withTimezone: true }),
   dueAt: timestamp('due_at', { withTimezone: true }),

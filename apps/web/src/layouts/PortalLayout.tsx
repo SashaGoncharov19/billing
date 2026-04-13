@@ -2,13 +2,15 @@ import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/auth.store'
 import api from '../lib/api'
 import { toast } from 'sonner'
-import { LogOut, LayoutDashboard, ReceiptText, Ticket, Settings, Briefcase, ShieldCheck, ShoppingBag } from 'lucide-react'
+import { LogOut, LayoutDashboard, ReceiptText, Ticket, Settings, Briefcase, ShieldCheck, ShoppingBag, ShoppingCart } from 'lucide-react'
 import { motion } from 'framer-motion'
+import { useCartStore } from '../store/cart.store'
 
 export default function PortalLayout() {
   const { user, tenant, logout } = useAuthStore()
   const navigate = useNavigate()
   const location = useLocation()
+  const cartItemCount = useCartStore(state => state.getTotalItems())
 
   const handleLogout = async () => {
     try {
@@ -117,7 +119,16 @@ export default function PortalLayout() {
             {navLinks.find(l => location.pathname.startsWith(l.path))?.name || 'Portal'}
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
+            <Link to="/checkout" className="relative group flex items-center justify-center p-2 rounded-full hover:bg-muted transition-colors">
+              <ShoppingCart size={20} className="text-muted-foreground group-hover:text-foreground transition-colors" />
+              {cartItemCount > 0 && (
+                <span className="absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4 bg-primary text-primary-foreground text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full shadow-sm ring-2 ring-background">
+                  {cartItemCount}
+                </span>
+              )}
+            </Link>
+          
             <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs ring-1 ring-primary/20 cursor-pointer hover:bg-primary/20 transition-colors">
               {initials}
             </div>

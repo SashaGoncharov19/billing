@@ -197,6 +197,9 @@ export class InvoiceService {
     // Queue PDF regeneration because the status and paid details have changed
     await this.queuePdfGeneration(tenantId, invoiceId).catch(console.error)
 
+    // Simulate Payment Confirmed Email dispatch to the user
+    console.log(`[EMAIL DISPATCH] Mock sending "Payment Confirmed" email to user for invoice ${invoiceId}`)
+
     return updatedInvoice
   }
 }

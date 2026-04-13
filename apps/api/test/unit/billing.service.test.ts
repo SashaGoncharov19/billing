@@ -78,8 +78,14 @@ describe('BillingService', () => {
     await testDb.insert(memberships).values({ tenantId: t!.id, userId: u!.id, role: 'owner' })
     const [p] = await testDb.insert(products).values({ tenantId: t!.id, name: 'SaaS', billingType: 'recurring', price: '10', stripePriceId: 'price_abc', currency: 'usd' }).returning()
     
-    const session = await service.createCheckoutSession(t!.id, p!.id, 'http://success', 'http://cancel')
-    expect(session.url).toBe('https://checkout')
+    const session = await service.createCheckoutSession(t!.id, [{ productId: p!.id, quantity: 1 }], 'http://success', 'http://cancel')
+    
+    if ('url' in session) {
+      expect(session.url).toBe('https://checkout')
+    } else {
+      throw new Error('Expected successful session payload')
+    }
+    
     expect(mockProvider.createCheckoutSession).toHaveBeenCalledWith(expect.objectContaining({
       tenantId: t!.id,
       customerId: 'cus_123',

@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react'
-import { useAdminInvoices, useAdminInvoicePay, useAdminInvoicePdf, useAdminInvoiceGeneratePdf } from '@/lib/api-admin'
+import { Link } from 'react-router-dom'
+import { useAdminInvoices, useAdminInvoicePay, useAdminInvoicePdf, useAdminInvoiceGeneratePdf, useAdminDeleteInvoice } from '@/lib/api-admin'
 import type { Invoice } from '@/lib/api-admin'
-import { Receipt, Download, Loader2, CheckCircle2, FileText, Eye, RefreshCw } from 'lucide-react'
+import { Receipt, Download, Loader2, CheckCircle2, Eye, RefreshCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 import PdfViewerModal from '@/components/ui/PdfViewerModal'
@@ -12,9 +13,10 @@ export default function AdminInvoices() {
   const markPaid = useAdminInvoicePay()
   const getPdf = useAdminInvoicePdf()
   const generatePdf = useAdminInvoiceGeneratePdf()
+  const deleteInvoice = useAdminDeleteInvoice()
 
   const [loadingPdfId, setLoadingPdfId] = useState<string | null>(null)
-  
+
   // Modal state
   const [modalOpen, setModalOpen] = useState(false)
   const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null)
@@ -39,7 +41,7 @@ export default function AdminInvoices() {
       setLoadingPdfId(id)
       const url = await getPdf.mutateAsync(id)
       window.open(url, '_blank')
-    } catch(e) {
+    } catch (e) {
       toast.error('Could not fetch PDF')
     } finally {
       setLoadingPdfId(null)
@@ -47,17 +49,27 @@ export default function AdminInvoices() {
   }
 
   const handleMarkPaid = async (id: string) => {
-    if(!confirm('Are you sure you want to mark this invoice as paid manually? This will grant the user their products.')) return
+    if (!confirm('Are you sure you want to mark this invoice as paid manually? This will grant the user their products.')) return
     try {
       await markPaid.mutateAsync(id)
       toast.success('Invoice marked as paid!')
-    } catch(e: any) {
+    } catch (e: any) {
       toast.error(e.response?.data?.message || 'Failed to mark as paid')
     }
   }
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to permanently delete this invoice? This action cannot be undone.')) return
+    try {
+      await deleteInvoice.mutateAsync(id)
+      toast.success('Invoice deleted successfully')
+    } catch (e: any) {
+      toast.error('Failed to delete invoice')
+    }
+  }
+
   const badgeColor = (status: string) => {
-    switch(status) {
+    switch (status) {
       case 'paid': return 'bg-green-100 text-green-800 border-green-200'
       case 'open': return 'bg-blue-100 text-blue-800 border-blue-200'
       case 'draft': return 'bg-gray-100 text-gray-800 border-gray-200'
@@ -73,8 +85,8 @@ export default function AdminInvoices() {
           <p className="text-muted-foreground">Manage all user invoices and payments.</p>
         </div>
         <div className="flex gap-2">
-          <select 
-            value={filter} 
+          <select
+            value={filter}
             onChange={e => setFilter(e.target.value)}
             className="p-2 border rounded-md bg-card text-sm"
           >
@@ -116,7 +128,13 @@ export default function AdminInvoices() {
                       {inv.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 truncate max-w-[150px]">{inv.createdByUserId || 'System'}</td>
+                  <td className="px-6 py-4 truncate max-w-[150px]">
+                    {inv.createdByUserId ? (
+                      <Link to={`/admin/users/${inv.createdByUserId}`} className="text-primary hover:underline">
+                        {inv.createdByUserId}
+                      </Link>
+                    ) : 'System'}
+                  </td>
                   <td className="px-6 py-4 text-muted-foreground">
                     {inv.issuedAt ? format(new Date(inv.issuedAt), 'MMM d, yyyy') : 'N/A'}
                   </td>
@@ -125,7 +143,7 @@ export default function AdminInvoices() {
                   </td>
                   <td className="px-6 py-4 text-right flex justify-end gap-2">
                     {inv.status === 'open' && (
-                      <button 
+                      <button
                         onClick={() => handleMarkPaid(inv.id)}
                         disabled={markPaid.isPending}
                         title="Mark as Paid"
@@ -134,9 +152,9 @@ export default function AdminInvoices() {
                         <CheckCircle2 size={16} />
                       </button>
                     )}
-                    
+
                     {!inv.pdfUrl ? (
-                      <button 
+                      <button
                         onClick={() => generatePdf.mutate(inv.id)}
                         disabled={generatePdf.isPending}
                         title="Generate PDF manually"
@@ -146,7 +164,7 @@ export default function AdminInvoices() {
                       </button>
                     ) : (
                       <>
-                        <button 
+                        <button
                           onClick={() => handleOpenViewer(inv.id, inv.pdfUrl)}
                           title="View Invoice"
                           className="inline-flex items-center justify-center p-2 rounded-lg transition-colors bg-primary/5 hover:bg-primary/15 text-primary"
@@ -154,7 +172,7 @@ export default function AdminInvoices() {
                           <Eye size={16} />
                         </button>
 
-                        <button 
+                        <button
                           onClick={() => handleDownloadDirect(inv.id, inv.pdfUrl)}
                           disabled={loadingPdfId === inv.id}
                           title="Download PDF"
@@ -164,6 +182,15 @@ export default function AdminInvoices() {
                         </button>
                       </>
                     )}
+                    
+                    <button 
+                      onClick={() => handleDelete(inv.id)}
+                      disabled={deleteInvoice.isPending}
+                      title="Delete Invoice"
+                      className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors disabled:opacity-50"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -172,11 +199,11 @@ export default function AdminInvoices() {
         )}
       </div>
 
-      <PdfViewerModal 
-        isOpen={modalOpen} 
-        onClose={() => setModalOpen(false)} 
-        pdfUrlFn={fetchPdfWrapper} 
-        title={`Invoice ${invoices?.find((i: Invoice) => i.id === activeInvoiceId)?.number ? `#${String(invoices.find((i: Invoice) => i.id === activeInvoiceId).number).padStart(6, '0')}` : ''}`} 
+      <PdfViewerModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        pdfUrlFn={fetchPdfWrapper}
+        title={`Invoice ${invoices?.find((i: Invoice) => i.id === activeInvoiceId)?.number ? `#${String(invoices.find((i: Invoice) => i.id === activeInvoiceId).number).padStart(6, '0')}` : ''}`}
       />
     </div>
   )

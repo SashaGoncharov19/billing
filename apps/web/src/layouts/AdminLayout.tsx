@@ -14,6 +14,7 @@ export default function AdminLayout() {
     { to: '/admin/payment-methods', icon: CreditCard, label: 'Payment Methods' },
     { to: '/admin/invoices', icon: Receipt, label: 'Invoices' },
     { to: '/admin/currencies', icon: Globe, label: 'Currencies' },
+    { to: '/admin/taxes', icon: Receipt, label: 'Regional Taxes' },
     { to: '/admin/settings', icon: Settings, label: 'Settings' },
     { to: '/admin/tenants', icon: Building, label: 'Tenants' },
     { to: '/admin/users', icon: Users, label: 'Users' },

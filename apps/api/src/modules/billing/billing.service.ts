@@ -40,28 +40,56 @@ export class BillingService {
     return customerId
   }
 
-  async createCheckoutSession(tenantId: string, productId: string, successUrl: string, cancelUrl: string) {
-    const product = await db.query.products.findFirst({
-      where: eq(products.id, productId)
+  async createCheckoutSession(tenantId: string, items: {productId: string, quantity: number}[], successUrl: string, cancelUrl: string, ipCountry?: string | null) {
+    if (!items || items.length === 0) {
+      throw new Error('No items provided')
+    }
+    
+    // Validate products exist
+    const dbProducts = await db.query.products.findMany({
+      where: (p, { inArray }) => inArray(p.id, items.map(i => i.productId))
     })
     
-    if (!product || product.tenantId !== tenantId) {
-      throw new Error('Product not found or access denied')
+    if (dbProducts.length !== items.length) {
+      throw new Error('One or more products not found')
     }
-    if (!product.stripePriceId) {
-        throw new Error('Product does not have a Stripe Price ID')
+    
+    // Ensure all products belong to tenant
+    if (dbProducts.some(p => p.tenantId !== tenantId)) {
+      throw new Error('Access denied to one or more products')
+    }
+    
+    // Ensure all products have Stripe Price ID
+    if (dbProducts.some(p => !p.stripePriceId)) {
+      throw new Error('One or more products missing Stripe integration')
     }
 
+    if (ipCountry) {
+       const tenantRec = await db.query.tenants.findFirst({ where: eq(tenants.id, tenantId) })
+       const checkCountry = tenantRec?.billingCountry
+
+       if (checkCountry && ipCountry.toUpperCase() !== checkCountry.toUpperCase()) {
+         return { 
+           error: 'COUNTRY_MISMATCH', 
+           message: `Your IP country (${ipCountry}) does not match your billing country (${checkCountry}). Stripe checkout restricted.` 
+         }
+       }
+    }
     const customerId = await this.getCustomerForTenant(tenantId)
+    
+    const lineItems = items.map(item => {
+       const product = dbProducts.find(p => p.id === item.productId)
+       return { priceId: product!.stripePriceId!, quantity: item.quantity }
+    })
 
     const session = await this.provider.createCheckoutSession({
       tenantId,
       customerId,
-      priceId: product.stripePriceId,
+      lineItems,
       successUrl,
       cancelUrl,
-      mode: product.billingType === 'recurring' ? 'subscription' : 'payment',
-      metadata: { tenantId, productId }
+      mode: dbProducts.some(p => p.billingType === 'recurring') ? 'subscription' : 'payment',
+      metadata: { tenantId, multiItemCheckout: 'true' }
     })
 
     return session

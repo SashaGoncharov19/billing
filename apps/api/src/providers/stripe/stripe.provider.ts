@@ -50,13 +50,16 @@ export class StripeProvider implements PaymentProvider {
   }
 
   async createCheckoutSession(data: CreateCheckoutSessionData) {
+    const line_items = data.lineItems 
+      ? data.lineItems.map(li => ({ price: li.priceId, quantity: li.quantity }))
+      : data.priceId 
+        ? [{ price: data.priceId, quantity: data.quantity ?? 1 }]
+        : [];
+        
     const session = await this.stripe.checkout.sessions.create({
       customer: data.customerId,
       mode: data.mode,
-      line_items: [{
-        price: data.priceId,
-        quantity: data.quantity ?? 1,
-      }],
+      line_items,
       success_url: data.successUrl,
       cancel_url: data.cancelUrl,
       metadata: {

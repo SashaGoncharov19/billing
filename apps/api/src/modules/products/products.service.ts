@@ -60,7 +60,6 @@ export class ProductsService {
       description: data.description,
       price: data.price,
       currency: data.currency || 'USD',
-      taxRate: data.taxRate !== undefined ? String(data.taxRate) : '0',
       billingType: data.billingType,
       billingInterval: data.billingInterval,
       pluginType: data.pluginType,
@@ -72,9 +71,8 @@ export class ProductsService {
     return newProduct
   }
 
-  async updateProduct(tenantId: string, id: string, data: Partial<{ name: string; description: string; price: string; currency: string; taxRate: number | string; pluginType: string; pluginConfig: unknown; isActive: boolean }>) {
+  async updateProduct(tenantId: string, id: string, data: Partial<{ name: string; description: string; price: string; currency: string; pluginType: string; pluginConfig: unknown; isActive: boolean }>) {
     const payload: any = { ...data, updatedAt: new Date() }
-    if (payload.taxRate !== undefined) payload.taxRate = String(payload.taxRate)
     
     const [updated] = await db.update(products)
       .set(payload)

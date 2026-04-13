@@ -79,6 +79,7 @@ export class TicketService {
     const ticket = await db.query.tickets.findFirst({
       where: and(...conditions),
       with: {
+        createdByUser: true
         // We will fetch comments separately to safely filter isInternal
       }
     })

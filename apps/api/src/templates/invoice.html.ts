@@ -1,4 +1,29 @@
-export function generateInvoiceHtml(invoice: any, tenant: any): string {
+import type { Invoice, Tenant } from '@entityseven/db'
+
+export type InvoiceViewData = Invoice & {
+  items: Array<{
+    description: string
+    quantity: number | string
+    unitPrice: number | string
+    totalAmount: number | string
+  }>
+  issuerDetails: {
+    name: string
+    address?: string | null
+    taxId?: string | null
+    email?: string | null
+    country?: string | null
+  }
+  recipientDetails: {
+    name: string
+    address?: string | null
+    taxId?: string | null
+    email?: string | null
+    country?: string | null
+  }
+}
+
+export function generateInvoiceHtml(invoice: InvoiceViewData, tenant: Tenant): string {
   // Simple format helpers
   const formatMoney = (amount: string | number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -12,7 +37,9 @@ export function generateInvoiceHtml(invoice: any, tenant: any): string {
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     }).format(new Date(date))
   }
 
@@ -117,6 +144,7 @@ export function generateInvoiceHtml(invoice: any, tenant: any): string {
       <div style="margin-top: 8px;">Status: <span class="status-badge">${invoice.status}</span></div>
       <div style="margin-top: 8px;">Issued: ${formatDate(invoice.issuedAt || invoice.createdAt)}</div>
       ${invoice.dueAt ? `<div style="margin-top: 4px;">Due: ${formatDate(invoice.dueAt)}</div>` : ''}
+      ${invoice.paymentMethod ? `<div style="margin-top: 4px;">Payment Method: ${invoice.paymentMethod}</div>` : ''}
       ${invoice.status === 'paid' && invoice.paidAt ? `<div style="margin-top: 4px; color: #059669; font-weight: 600;">Paid: ${formatDate(invoice.paidAt)}</div>` : ''}
     </div>
   </div>
