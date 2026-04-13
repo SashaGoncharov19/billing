@@ -57,9 +57,10 @@ export const billingRouter = new Elysia({ prefix: '/billing' })
       number: Number(Date.now().toString().slice(-8)),
       status: 'open',
       currency: currencyStr.toUpperCase(),
-      totalAmount: totalAmount.toFixed(2),
+      totalAmount: (totalAmount * (1 + Number(product.taxRate || 0))).toFixed(2),
       subtotalAmount: totalAmount.toFixed(2),
-      taxAmount: '0.00',
+      taxAmount: (totalAmount * Number(product.taxRate || 0)).toFixed(2),
+      issuedAt: new Date(),
       createdByUserId: user.id,
       issuerDetails: {
         name: tenant.billingEntity || tenant.name,

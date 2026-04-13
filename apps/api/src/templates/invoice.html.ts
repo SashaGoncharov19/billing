@@ -115,8 +115,9 @@ export function generateInvoiceHtml(invoice: any, tenant: any): string {
     <div style="text-align: right">
       <div class="invoice-number">Invoice #${String(invoice.number).padStart(6, '0')}</div>
       <div style="margin-top: 8px;">Status: <span class="status-badge">${invoice.status}</span></div>
-      <div style="margin-top: 8px;">Issued: ${formatDate(invoice.issuedAt)}</div>
-      <div style="margin-top: 4px;">Due: ${formatDate(invoice.dueAt)}</div>
+      <div style="margin-top: 8px;">Issued: ${formatDate(invoice.issuedAt || invoice.createdAt)}</div>
+      ${invoice.dueAt ? `<div style="margin-top: 4px;">Due: ${formatDate(invoice.dueAt)}</div>` : ''}
+      ${invoice.status === 'paid' && invoice.paidAt ? `<div style="margin-top: 4px; color: #059669; font-weight: 600;">Paid: ${formatDate(invoice.paidAt)}</div>` : ''}
     </div>
   </div>
 
@@ -166,10 +167,15 @@ export function generateInvoiceHtml(invoice: any, tenant: any): string {
   <div class="totals">
     <div style="margin-bottom: 4px;">Subtotal: ${formatMoney(invoice.subtotalAmount, invoice.currency)}</div>
     <div style="margin-bottom: 12px;">Tax: ${formatMoney(invoice.taxAmount, invoice.currency)}</div>
-    <div class="total-row">Total: ${formatMoney(invoice.totalAmount, invoice.currency)}</div>
-  </div>
-
-  ${invoice.notes ? `<div style="margin-top: 40px; padding: 16px; background-color: #F9FAFB; border-radius: 8px;"><strong>Notes:</strong><br>${invoice.notes}</div>` : ''}
+      <div class="total-row">Total: ${formatMoney(invoice.totalAmount, invoice.currency)}</div>
+    </div>
+    
+    ${invoice.notes ? `
+      <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #E5E7EB; color: #6B7280; font-size: 14px;">
+        <strong>Notes:</strong><br/>
+        ${invoice.notes.replace(/\n/g, '<br/>')}
+      </div>
+    ` : ''}
 </body>
 </html>`
 }
