@@ -37,10 +37,22 @@ export interface SendPaymentReceiptJob {
   }
 }
 
+export interface SendEmailJob {
+  type: 'send-email'
+  data: {
+    to: string | string[]
+    subject: string
+    body?: string
+    html?: string
+  }
+}
+
 export type EmailJob =
   | SendInvoiceNotificationJob
   | SendTicketNotificationJob
   | SendPaymentReceiptJob
+  | SendEmailJob
+
 
 export interface GenerateInvoicePdfJob {
   type: 'invoice'

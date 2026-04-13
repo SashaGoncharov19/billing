@@ -121,6 +121,7 @@ export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.ro
 
     if (body.description !== undefined) payload.description = body.description
     if (body.currency !== undefined) payload.currency = body.currency
+    if (body.taxRate !== undefined) payload.taxRate = Number(body.taxRate)
     if (body.pluginType !== undefined) payload.pluginType = body.pluginType
     if (body.pluginConfig !== undefined) payload.pluginConfig = body.pluginConfig
     if (body.billingInterval !== undefined) payload.billingInterval = body.billingInterval
@@ -133,6 +134,7 @@ export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.ro
       description: t.Optional(t.String()),
       price: t.Numeric(),
       currency: t.Optional(t.String()),
+      taxRate: t.Optional(t.Numeric()),
       billingType: t.Optional(t.Union([t.Literal('one_time'), t.Literal('recurring')])),
       billingInterval: t.Optional(t.Union([t.Literal('month'), t.Literal('year')])),
       pluginType: t.Optional(t.String()),
@@ -141,7 +143,9 @@ export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.ro
   })
   .patch('/products/:id', async ({ params: { id }, body }) => {
     const productsService = new ProductsService()
-    return await productsService.updateProduct(body.tenantId, id, body)
+    const payload: Record<string, unknown> = { ...body }
+    delete payload.tenantId
+    return await productsService.updateProduct(body.tenantId, id, payload)
   }, {
     params: t.Object({
       id: t.String(),
@@ -150,6 +154,9 @@ export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.ro
       tenantId: t.String(),
       name: t.Optional(t.String()),
       description: t.Optional(t.String()),
+      price: t.Optional(t.Numeric()),
+      currency: t.Optional(t.String()),
+      taxRate: t.Optional(t.Numeric()),
       pluginType: t.Optional(t.String()),
       pluginConfig: t.Optional(t.Unknown()),
       isActive: t.Optional(t.Boolean()),

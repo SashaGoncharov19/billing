@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from './api'
-import type { Product, Currency, PaymentMethod } from './api-admin'
+import type { Product, Currency, PaymentMethod, Invoice } from './api-admin'
 
 export const storeKeys = {
   all: ['store'] as const,
@@ -104,6 +104,11 @@ export const usePortalInvoices = () => {
       // For a portal user, status isn't necessarily filtered, just all their invoices
       const { data } = await api.get('/invoices')
       return data.data
+    },
+    refetchInterval: (query) => {
+      const data = query.state.data as Invoice[] | undefined
+      const hasMissingPdfs = data?.some(inv => !inv.pdfUrl)
+      return hasMissingPdfs ? 3000 : false
     }
   })
 }

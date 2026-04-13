@@ -10,6 +10,7 @@ export const products = pgTable('products', {
   name: varchar('name', { length: 255 }).notNull(),
   description: varchar('description', { length: 1000 }),
   price: numeric('price', { precision: 12, scale: 2 }).notNull(),
+  taxRate: numeric('tax_rate', { precision: 5, scale: 4 }).default('0').notNull(),
   currency: varchar('currency', { length: 3 }).default('USD').notNull(),
   billingType: billingTypeEnum('billing_type').default('one_time').notNull(),
   billingInterval: billingIntervalEnum('billing_interval'),  // null for one_time

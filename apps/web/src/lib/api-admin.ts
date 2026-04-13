@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from './api'
 import axios from 'axios'
+import { toast } from 'sonner'
 
 // Types
 export interface AdminStats {
@@ -37,6 +38,7 @@ export interface Product {
   description?: string
   price: string | number
   currency: string
+  taxRate?: string | number
   billingType: string
   billingInterval?: string
   pluginType?: string
@@ -330,6 +332,11 @@ export const useAdminInvoices = (statusFilter?: string) => {
     queryFn: async () => {
       const { data } = await api.get<{ data: Invoice[] }>('/invoices', { params: { status: statusFilter } })
       return data.data
+    },
+    refetchInterval: (query) => {
+      const data = query.state.data as Invoice[] | undefined
+      const hasMissingPdfs = data?.some(inv => !inv.pdfUrl)
+      return hasMissingPdfs ? 3000 : false
     }
   })
 }
@@ -350,6 +357,20 @@ export const useAdminInvoicePdf = () => {
     mutationFn: async (id: string) => {
       const { data } = await api.get<{ url: string }>(`/invoices/${id}/pdf`)
       return data.url
+    }
+  })
+}
+
+export const useAdminInvoiceGeneratePdf = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.post(`/invoices/${id}/generate-pdf`)
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['adminInvoices'] })
+      toast.success('Queued PDF generation')
     }
   })
 }

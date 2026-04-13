@@ -1,21 +1,37 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { usePortalInvoices, usePortalInvoicePdf } from '@/lib/api-store'
 import type { Invoice } from '@/lib/api-admin'
-import { Receipt, Download, Loader2, FileText } from 'lucide-react'
+import { Receipt, Download, Loader2, FileText, Eye } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import PdfViewerModal from '@/components/ui/PdfViewerModal'
 
 export default function PortalInvoices() {
   const { data: invoices, isLoading } = usePortalInvoices()
   const getPdf = usePortalInvoicePdf()
 
   const [loadingPdfId, setLoadingPdfId] = useState<string | null>(null)
+  
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false)
+  const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null)
 
-  const handleDownload = async (id: string, pdfUrl?: string) => {
+  const handleOpenViewer = (id: string, pdfUrl?: string) => {
     if (!pdfUrl) {
       toast.info('Invoice PDF is not available yet across the CDN. Please check back shortly.')
       return
     }
+    setActiveInvoiceId(id)
+    setModalOpen(true)
+  }
+
+  const fetchPdfWrapper = useCallback(async () => {
+    if (!activeInvoiceId) throw new Error('No invoice selected')
+    return await getPdf.mutateAsync(activeInvoiceId)
+  }, [activeInvoiceId, getPdf])
+
+  const handleDownloadDirect = async (id: string, pdfUrl?: string) => {
+    if (!pdfUrl) return
     try {
       setLoadingPdfId(id)
       const url = await getPdf.mutateAsync(id)
@@ -80,18 +96,30 @@ export default function PortalInvoices() {
                   <td className="px-6 py-4 font-semibold">
                     {Number(inv.totalAmount).toLocaleString('en-US', { style: 'currency', currency: inv.currency })}
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right flex justify-end gap-2">
                     <button 
-                      onClick={() => handleDownload(inv.id, inv.pdfUrl)}
-                      disabled={loadingPdfId === inv.id}
-                      title={inv.pdfUrl ? "Download PDF" : "PDF processing. Available momentarily..."}
+                      onClick={() => handleOpenViewer(inv.id, inv.pdfUrl)}
+                      title={inv.pdfUrl ? "View Invoice" : "Processing..."}
                       className={`inline-flex items-center justify-center p-2 rounded-lg transition-colors ${
                         inv.pdfUrl 
                           ? 'bg-primary/5 hover:bg-primary/15 text-primary' 
                           : 'bg-muted text-muted-foreground opacity-50 cursor-not-allowed'
                       }`}
                     >
-                      {loadingPdfId === inv.id ? <Loader2 size={16} className="animate-spin" /> : inv.pdfUrl ? <Download size={16} /> : <FileText size={16} />}
+                      {inv.pdfUrl ? <Eye size={16} /> : <FileText size={16} />}
+                    </button>
+
+                    <button 
+                      onClick={() => handleDownloadDirect(inv.id, inv.pdfUrl)}
+                      disabled={loadingPdfId === inv.id || !inv.pdfUrl}
+                      title={inv.pdfUrl ? "Download PDF" : "Processing..."}
+                      className={`inline-flex items-center justify-center p-2 rounded-lg transition-colors ${
+                        inv.pdfUrl 
+                          ? 'bg-primary/5 hover:bg-primary/15 text-primary' 
+                          : 'bg-muted text-muted-foreground opacity-50 cursor-not-allowed'
+                      }`}
+                    >
+                      {loadingPdfId === inv.id ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
                     </button>
                   </td>
                 </tr>
@@ -100,6 +128,13 @@ export default function PortalInvoices() {
           </table>
         )}
       </div>
+
+      <PdfViewerModal 
+        isOpen={modalOpen} 
+        onClose={() => setModalOpen(false)} 
+        pdfUrlFn={fetchPdfWrapper} 
+        title={`Invoice ${invoices?.find((i: Invoice) => i.id === activeInvoiceId)?.number ? `#${String(invoices.find((i: Invoice) => i.id === activeInvoiceId).number).padStart(6, '0')}` : ''}`} 
+      />
     </div>
   )
 }

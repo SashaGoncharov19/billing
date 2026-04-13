@@ -162,8 +162,17 @@ export class InvoiceService {
     return getInvoiceSignedUrl(invoice.pdfUrl, 3600)
   }
 
+  async queuePdfGeneration(tenantId: string, invoiceId: string) {
+    await this.getInvoiceById(tenantId, invoiceId) // validate it exists
+    await pdfQueue.add('generate-pdf', {
+      type: 'invoice',
+      data: { tenantId, invoiceId }
+    })
+    return { status: 'queued' }
+  }
+
   async markPaid(tenantId: string, invoiceId: string) {
-    return await db.transaction(async (tx) => {
+    const updatedInvoice = await db.transaction(async (tx) => {
       const invoice = await tx.query.invoices.findFirst({
         where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId))
       })
@@ -177,11 +186,17 @@ export class InvoiceService {
           paidAmount: invoice.totalAmount,
           paidAt: new Date(),
           updatedAt: new Date(),
+          pdfUrl: null // Invalidate the old PDF so it can be regenerated
         })
         .where(eq(invoices.id, invoiceId))
         .returning()
         
       return updated
     })
+
+    // Queue PDF regeneration because the status and paid details have changed
+    await this.queuePdfGeneration(tenantId, invoiceId).catch(console.error)
+
+    return updatedInvoice
   }
 }

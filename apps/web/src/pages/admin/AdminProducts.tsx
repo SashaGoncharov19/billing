@@ -5,9 +5,10 @@ import {
   useAdminPluginOptions,
   useAdminCreateProduct,
   useAdminUpdateProduct,
-  useAdminDeleteProduct
+  useAdminDeleteProduct,
+  useAdminCurrencies
 } from '@/lib/api-admin'
-import type { Product } from '@/lib/api-admin'
+import type { Product, Currency } from '@/lib/api-admin'
 import { useAuthStore } from '@/store/auth.store'
 import { Plus, Package, Plug, Loader2, Edit, Trash2 } from 'lucide-react'
 
@@ -27,11 +28,15 @@ export default function AdminProducts() {
     name: '',
     description: '',
     price: '',
+    currency: 'usd',
+    taxRate: '0',
     billingType: 'one_time',
     billingInterval: 'month',
     pluginType: '',
     pluginConfigTemplateId: ''
   })
+  
+  const { data: currencies } = useAdminCurrencies()
 
   const handleEdit = (product: Product) => {
     setEditingId(product.id)
@@ -39,6 +44,8 @@ export default function AdminProducts() {
       name: product.name,
       description: product.description || '',
       price: product.price.toString(),
+      currency: product.currency || 'usd',
+      taxRate: product.taxRate ? (Number(product.taxRate) * 100).toString() : '0',
       billingType: product.billingType,
       billingInterval: product.billingInterval || 'month',
       pluginType: product.pluginType || '',
@@ -57,7 +64,7 @@ export default function AdminProducts() {
   const openNewModal = () => {
     setEditingId(null)
     setFormData({
-      name: '', description: '', price: '', billingType: 'one_time', billingInterval: 'month', pluginType: '', pluginConfigTemplateId: ''
+      name: '', description: '', price: '', currency: 'usd', taxRate: '0', billingType: 'one_time', billingInterval: 'month', pluginType: '', pluginConfigTemplateId: ''
     })
     setIsModalOpen(true)
   }
@@ -85,10 +92,14 @@ export default function AdminProducts() {
     }
 
     if (editingId) {
+      if (formData.taxRate !== undefined && formData.taxRate !== '') {
+         payload.taxRate = parseFloat(formData.taxRate) / 100
+      }
       await updateProduct.mutateAsync({ id: editingId, tenantId: tenant.id, payload })
     } else {
       payload.price = parseFloat(formData.price)
-      payload.currency = 'usd'
+      payload.currency = formData.currency
+      payload.taxRate = formData.taxRate ? parseFloat(formData.taxRate) / 100 : 0
       payload.billingType = formData.billingType
       if (formData.billingType === 'recurring') {
         payload.billingInterval = formData.billingInterval
@@ -99,7 +110,7 @@ export default function AdminProducts() {
     setIsModalOpen(false)
     setEditingId(null)
     setFormData({
-      name: '', description: '', price: '', billingType: 'one_time', billingInterval: 'month', pluginType: '', pluginConfigTemplateId: ''
+      name: '', description: '', price: '', currency: 'usd', taxRate: '0', billingType: 'one_time', billingInterval: 'month', pluginType: '', pluginConfigTemplateId: ''
     })
   }
 
@@ -213,16 +224,42 @@ export default function AdminProducts() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Price (USD)</label>
+                    <label className="text-sm font-medium">Price</label>
+                    <div className="flex gap-2">
+                      <input
+                        required
+                        disabled={!!editingId}
+                        type="number"
+                        step="0.01"
+                        value={formData.price}
+                        onChange={(e) => setFormData(p => ({ ...p, price: e.target.value }))}
+                        className="w-full p-2 rounded-md border bg-background disabled:opacity-50"
+                        placeholder="0.00"
+                      />
+                      <select
+                        disabled={!!editingId} // Can't change currency after creation
+                        value={formData.currency}
+                        onChange={(e) => setFormData(p => ({ ...p, currency: e.target.value }))}
+                        className="w-24 p-2 rounded-md border bg-background disabled:opacity-50 uppercase"
+                      >
+                         {currencies?.map((c: Currency) => (
+                            <option key={c.code} value={c.code.toLowerCase()}>{c.code.toUpperCase()}</option>
+                         ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Tax Percentage (%)</label>
                     <input
-                      required
-                      disabled={!!editingId} // Disable if editing
                       type="number"
-                      step="0.01"
-                      value={formData.price}
-                      onChange={(e) => setFormData(p => ({ ...p, price: e.target.value }))}
-                      className="w-full p-2 rounded-md border bg-background disabled:opacity-50"
-                      placeholder="0.00"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={formData.taxRate}
+                      onChange={(e) => setFormData(p => ({ ...p, taxRate: e.target.value }))}
+                      className="w-full p-2 rounded-md border bg-background"
+                      placeholder="e.g. 20"
                     />
                   </div>
 

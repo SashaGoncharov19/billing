@@ -1,0 +1,1 @@
+ALTER TABLE "products" ADD COLUMN "tax_rate" numeric(5, 4) DEFAULT '0' NOT NULL;

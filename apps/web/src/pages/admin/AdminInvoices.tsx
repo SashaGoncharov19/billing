@@ -1,23 +1,40 @@
-import { useState } from 'react'
-import { useAdminInvoices, useAdminInvoicePay, useAdminInvoicePdf } from '@/lib/api-admin'
+import { useState, useCallback } from 'react'
+import { useAdminInvoices, useAdminInvoicePay, useAdminInvoicePdf, useAdminInvoiceGeneratePdf } from '@/lib/api-admin'
 import type { Invoice } from '@/lib/api-admin'
-import { Receipt, Download, Loader2, CheckCircle2, FileText } from 'lucide-react'
+import { Receipt, Download, Loader2, CheckCircle2, FileText, Eye, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
+import PdfViewerModal from '@/components/ui/PdfViewerModal'
 
 export default function AdminInvoices() {
   const [filter, setFilter] = useState<string>('')
   const { data: invoices, isLoading } = useAdminInvoices(filter || undefined)
   const markPaid = useAdminInvoicePay()
   const getPdf = useAdminInvoicePdf()
+  const generatePdf = useAdminInvoiceGeneratePdf()
 
   const [loadingPdfId, setLoadingPdfId] = useState<string | null>(null)
+  
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false)
+  const [activeInvoiceId, setActiveInvoiceId] = useState<string | null>(null)
 
-  const handleDownload = async (id: string, pdfUrl?: string) => {
+  const handleOpenViewer = (id: string, pdfUrl?: string) => {
     if (!pdfUrl) {
-      toast.info('PDF is still generating...')
+      toast.info('Invoice PDF is not available yet across the CDN. Please check back shortly.')
       return
     }
+    setActiveInvoiceId(id)
+    setModalOpen(true)
+  }
+
+  const fetchPdfWrapper = useCallback(async () => {
+    if (!activeInvoiceId) throw new Error('No invoice selected')
+    return await getPdf.mutateAsync(activeInvoiceId)
+  }, [activeInvoiceId, getPdf])
+
+  const handleDownloadDirect = async (id: string, pdfUrl?: string) => {
+    if (!pdfUrl) return
     try {
       setLoadingPdfId(id)
       const url = await getPdf.mutateAsync(id)
@@ -117,14 +134,36 @@ export default function AdminInvoices() {
                         <CheckCircle2 size={16} />
                       </button>
                     )}
-                    <button 
-                      onClick={() => handleDownload(inv.id, inv.pdfUrl)}
-                      disabled={loadingPdfId === inv.id}
-                      title={inv.pdfUrl ? "Download PDF" : "PDF Processing..."}
-                      className={`p-2 rounded-md ${inv.pdfUrl ? 'hover:bg-primary/10 text-primary' : 'text-muted-foreground opacity-50 cursor-not-allowed'}`}
-                    >
-                      {loadingPdfId === inv.id ? <Loader2 size={16} className="animate-spin" /> : inv.pdfUrl ? <Download size={16} /> : <FileText size={16} />}
-                    </button>
+                    
+                    {!inv.pdfUrl ? (
+                      <button 
+                        onClick={() => generatePdf.mutate(inv.id)}
+                        disabled={generatePdf.isPending}
+                        title="Generate PDF manually"
+                        className="inline-flex items-center justify-center p-2 rounded-lg transition-colors bg-primary/10 hover:bg-primary/20 text-primary"
+                      >
+                        {generatePdf.isPending ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                      </button>
+                    ) : (
+                      <>
+                        <button 
+                          onClick={() => handleOpenViewer(inv.id, inv.pdfUrl)}
+                          title="View Invoice"
+                          className="inline-flex items-center justify-center p-2 rounded-lg transition-colors bg-primary/5 hover:bg-primary/15 text-primary"
+                        >
+                          <Eye size={16} />
+                        </button>
+
+                        <button 
+                          onClick={() => handleDownloadDirect(inv.id, inv.pdfUrl)}
+                          disabled={loadingPdfId === inv.id}
+                          title="Download PDF"
+                          className="inline-flex items-center justify-center p-2 rounded-lg transition-colors bg-primary/5 hover:bg-primary/15 text-primary"
+                        >
+                          {loadingPdfId === inv.id ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -132,6 +171,13 @@ export default function AdminInvoices() {
           </table>
         )}
       </div>
+
+      <PdfViewerModal 
+        isOpen={modalOpen} 
+        onClose={() => setModalOpen(false)} 
+        pdfUrlFn={fetchPdfWrapper} 
+        title={`Invoice ${invoices?.find((i: Invoice) => i.id === activeInvoiceId)?.number ? `#${String(invoices.find((i: Invoice) => i.id === activeInvoiceId).number).padStart(6, '0')}` : ''}`} 
+      />
     </div>
   )
 }
