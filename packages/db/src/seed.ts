@@ -1,5 +1,6 @@
 import { db } from './client'
 import * as schema from './schema'
+import { password } from 'bun'
 
 async function main() {
   console.log('Seeding database...')
@@ -10,7 +11,7 @@ async function main() {
     slug: 'es-demo'
   }).returning()
 
-  const hashedPassword = await Bun.password.hash('admin123', {
+  const hashedPassword = await password.hash('admin123', {
     algorithm: 'argon2id',
     memoryCost: 65536,
     timeCost: 3,

@@ -22,7 +22,7 @@ export class ProductsService {
     })
   }
 
-  async createProduct(tenantId: string, data: { name: string; description?: string; price: string; currency?: string; taxRate?: number | string; billingType: 'one_time' | 'recurring'; billingInterval?: 'month' | 'year'; pluginType?: string; pluginConfig?: unknown }) {
+  async createProduct(tenantId: string, data: { name: string; description?: string; price: string; setupFee?: string; currency?: string; billingType: 'one_time' | 'recurring'; billingInterval?: 'month' | 'year'; pluginType?: string; pluginConfig?: unknown }) {
     // Basic product creation logic. If recurring we might sync to Stripe here.
     // In many SaaS, products are global but here SPEC says tenant-scoped.
     let stripeProductId = null
@@ -59,6 +59,7 @@ export class ProductsService {
       name: data.name,
       description: data.description,
       price: data.price,
+      setupFee: data.setupFee || '0',
       currency: data.currency || 'USD',
       billingType: data.billingType,
       billingInterval: data.billingInterval,
@@ -71,7 +72,7 @@ export class ProductsService {
     return newProduct
   }
 
-  async updateProduct(tenantId: string, id: string, data: Partial<{ name: string; description: string; price: string; currency: string; pluginType: string; pluginConfig: unknown; isActive: boolean }>) {
+  async updateProduct(tenantId: string, id: string, data: Partial<{ name: string; description: string; price: string; setupFee: string; currency: string; pluginType: string; pluginConfig: unknown; isActive: boolean }>) {
     const payload: any = { ...data, updatedAt: new Date() }
     
     const [updated] = await db.update(products)

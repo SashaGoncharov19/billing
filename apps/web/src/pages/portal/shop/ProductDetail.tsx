@@ -17,6 +17,8 @@ export default function ProductDetail() {
       productId: product.id,
       name: product.name,
       price: String(product.price),
+      setupFee: product.setupFee ? String(product.setupFee) : undefined,
+      currency: product.currency || 'USD',
       billingType: product.billingType,
       quantity: 1
     })
@@ -96,16 +98,22 @@ export default function ProductDetail() {
           <div className="relative z-10">
             <h3 className="text-sm font-semibold uppercase tracking-widest text-primary mb-2">Order Summary</h3>
             <div className="flex items-end gap-2 mb-8">
-              <span className="text-5xl font-extrabold tracking-tight">${Number(product.price).toFixed(2)}</span>
+              <span className="text-5xl font-extrabold tracking-tight">
+                {new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency || 'USD' }).format(Number(product.price))}
+              </span>
               <span className="text-muted-foreground font-medium mb-1 uppercase">
-                {product.currency} {product.billingType === 'recurring' ? `/ ${product.billingInterval}` : 'One Time'}
+                {product.billingType === 'recurring' ? `/ ${product.billingInterval}` : 'One Time'}
               </span>
             </div>
 
             <div className="space-y-4 mb-8">
               <div className="flex justify-between border-b pb-2 text-sm">
                 <span className="text-muted-foreground">Setup Fee</span>
-                <span className="font-medium">$0.00</span>
+                <span className="font-medium">
+                  {product.setupFee && Number(product.setupFee) > 0 
+                     ? new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency || 'USD' }).format(Number(product.setupFee)) 
+                     : 'None'}
+                </span>
               </div>
               <div className="flex justify-between border-b pb-2 text-sm">
                 <span className="text-muted-foreground">Tax</span>

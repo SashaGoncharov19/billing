@@ -28,6 +28,7 @@ export default function AdminProducts() {
     name: '',
     description: '',
     price: '',
+    setupFee: '',
     currency: 'usd',
     billingType: 'one_time',
     billingInterval: 'month',
@@ -44,6 +45,7 @@ export default function AdminProducts() {
       description: product.description || '',
       price: product.price.toString(),
       currency: product.currency || 'usd',
+      setupFee: product.setupFee ? product.setupFee.toString() : '',
       billingType: product.billingType,
       billingInterval: product.billingInterval || 'month',
       pluginType: product.pluginType || '',
@@ -62,7 +64,7 @@ export default function AdminProducts() {
   const openNewModal = () => {
     setEditingId(null)
     setFormData({
-      name: '', description: '', price: '', currency: 'usd', billingType: 'one_time', billingInterval: 'month', pluginType: '', pluginConfigTemplateId: ''
+      name: '', description: '', price: '', setupFee: '', currency: 'usd', billingType: 'one_time', billingInterval: 'month', pluginType: '', pluginConfigTemplateId: ''
     })
     setIsModalOpen(true)
   }
@@ -79,6 +81,7 @@ export default function AdminProducts() {
     const payload: Record<string, unknown> = {
       tenantId: tenant.id,
       name: formData.name,
+      setupFee: formData.setupFee || undefined,
       description: formData.description,
     }
 
@@ -104,7 +107,7 @@ export default function AdminProducts() {
     setIsModalOpen(false)
     setEditingId(null)
     setFormData({
-      name: '', description: '', price: '', currency: 'usd', billingType: 'one_time', billingInterval: 'month', pluginType: '', pluginConfigTemplateId: ''
+      name: '', description: '', price: '', setupFee: '', currency: 'usd', billingType: 'one_time', billingInterval: 'month', pluginType: '', pluginConfigTemplateId: ''
     })
   }
 
@@ -137,6 +140,7 @@ export default function AdminProducts() {
             <thead className="bg-muted/50 text-muted-foreground border-b uppercase text-xs">
               <tr>
                 <th className="px-6 py-4 font-medium">Name</th>
+                <th className="px-6 py-4 font-medium">Setup Fee</th>
                 <th className="px-6 py-4 font-medium">Price</th>
                 <th className="px-6 py-4 font-medium">Type</th>
                 <th className="px-6 py-4 font-medium">Plugin</th>
@@ -213,6 +217,19 @@ export default function AdminProducts() {
                     onChange={(e) => setFormData(p => ({ ...p, description: e.target.value }))}
                     className="w-full p-2 rounded-md border bg-background"
                     placeholder="Short description"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Setup Fee (One-time)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.setupFee}
+                    onChange={(e) => setFormData(p => ({ ...p, setupFee: e.target.value }))}
+                    className="w-full p-2 rounded-md border bg-background"
+                    placeholder="0.00"
                   />
                 </div>
 

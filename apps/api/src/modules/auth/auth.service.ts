@@ -18,6 +18,8 @@ export class AuthService {
       const [newUser] = await tx.insert(users).values({
         email: input.email,
         passwordHash: hashedPassword,
+        firstName: input.firstName,
+        lastName: input.lastName,
       }).returning()
 
       // 2. Create Personal Tenant

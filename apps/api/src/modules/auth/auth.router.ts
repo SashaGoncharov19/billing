@@ -184,6 +184,8 @@ export const authRouter = new Elysia({ prefix: '/auth' })
       preferredLanguage: 'en',
       role: userMemberships[0]?.role, // Pick current context role, usually they have 1
       memberships: userMemberships,
+      firstName: dbUser?.firstName,
+      lastName: dbUser?.lastName,
       billingName: dbUser?.billingName,
       billingAddress: dbUser?.billingAddress,
       billingTaxId: dbUser?.billingTaxId,

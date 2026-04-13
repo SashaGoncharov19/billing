@@ -338,8 +338,9 @@ export default function TicketDetail() {
           
           <div className="space-y-4">
             <div>
-              <span className="text-xs uppercase text-muted-foreground font-semibold tracking-wider block mb-1">Email / ID</span>
-              <div className="font-medium text-sm break-all">{ticket.createdByUser.email}</div>
+              <span className="text-xs uppercase text-muted-foreground font-semibold tracking-wider block mb-1">Account & Identity</span>
+              <div className="font-medium text-foreground">{ticket.createdByUser.firstName && ticket.createdByUser.lastName ? `${ticket.createdByUser.firstName} ${ticket.createdByUser.lastName}` : (ticket.createdByUser.firstName || 'No Name Provided')}</div>
+              <div className="font-medium text-sm text-muted-foreground break-all">{ticket.createdByUser.email}</div>
               <div className="text-xs text-muted-foreground font-mono mt-0.5">{ticket.createdByUser.id}</div>
             </div>
 
@@ -362,8 +363,9 @@ export default function TicketDetail() {
               <Link 
                 to="/admin/invoices"
                 className="w-full flex items-center justify-between p-2 rounded-lg bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20 transition-colors"
+                state={{ filterUserId: ticket.createdByUserId }}
               >
-                Global Invoices
+                View user invoices
                 <ArrowLeft size={14} className="rotate-180" />
               </Link>
             </div>

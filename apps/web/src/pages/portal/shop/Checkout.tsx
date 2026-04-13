@@ -3,13 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { useStorePaymentMethods, useStoreCurrencies, useCheckoutMutation, useManualCheckoutMutation } from '@/lib/api-store'
 import { useCartStore } from '@/store/cart.store'
 import { CreditCard, Loader2, Lock, Receipt, ChevronRight, PackageX } from 'lucide-react'
-import { toast } from 'sonner'
 
 export default function Checkout() {
   const navigate = useNavigate()
   
-  // Cart state
-  const { items, removeItem, clearCart, updateQuantity } = useCartStore()
+  const { items, removeItem, clearCart } = useCartStore()
   
   const { data: paymentMethods, isLoading: loadingMethods } = useStorePaymentMethods()
   const { data: currencies } = useStoreCurrencies()
@@ -36,14 +34,21 @@ export default function Checkout() {
 
   const activeCurrency = currencies?.find(c => c.id === selectedCurrencyId)
 
-  // Calculate dynamic price based on exchange rate for items
-  const displayPrice = (basePriceNum: number) => {
-    if (!activeCurrency) return 0
-    return (basePriceNum * Number(activeCurrency.exchangeRate)).toFixed(2)
+
+
+  const formatCurrency = (amount: number) => {
+    if (!activeCurrency) return `$${amount.toFixed(2)}`
+    return new Intl.NumberFormat('en-US', {
+       style: 'currency',
+       currency: activeCurrency.code
+    }).format(amount * Number(activeCurrency.exchangeRate))
   }
 
   const subtotalBase = items.reduce((total, item) => total + (Number(item.price) * item.quantity), 0)
-  const displaySubtotal = () => displayPrice(subtotalBase)
+  const setupFeeBase = items.reduce((total, item) => total + (item.setupFee ? Number(item.setupFee) * item.quantity : 0), 0)
+  const totalBase = subtotalBase + setupFeeBase
+  
+  const displaySubtotal = () => formatCurrency(totalBase)
 
   const handlePay = async () => {
     if (items.length === 0) return
@@ -151,8 +156,11 @@ export default function Checkout() {
                       <div className="text-xs text-muted-foreground">Qty: {item.quantity} | {item.billingType === 'recurring' ? 'Recurring' : 'One Time'}</div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <div className="font-medium text-sm">
-                        {activeCurrency?.symbol}{displayPrice(Number(item.price) * item.quantity)}
+                      <div className="font-medium text-sm flex flex-col items-end gap-1">
+                        <span>{formatCurrency(Number(item.price) * item.quantity)}</span>
+                        {item.setupFee && Number(item.setupFee) > 0 && (
+                          <span className="text-xs text-primary">+ {formatCurrency(Number(item.setupFee) * item.quantity)} setup</span>
+                        )}
                       </div>
                       <button 
                          onClick={() => removeItem(item.productId)}
@@ -230,7 +238,7 @@ export default function Checkout() {
             <div className="space-y-4 mb-8">
               <div className="flex justify-between border-b pb-2 text-sm">
                 <span className="text-muted-foreground">Setup Fee</span>
-                <span className="font-medium">$0.00</span>
+                <span className="font-medium">{formatCurrency(setupFeeBase)}</span>
               </div>
               <div className="flex justify-between border-b pb-2 text-sm">
                 <span className="text-muted-foreground">Tax</span>
@@ -242,7 +250,7 @@ export default function Checkout() {
               <div className="flex justify-between items-end">
                 <span className="font-semibold text-lg">Total</span>
                 <span className="text-3xl font-bold tracking-tight">
-                   {activeCurrency?.symbol}{displaySubtotal()}
+                   {displaySubtotal()}
                    <span className="text-sm text-muted-foreground font-medium ml-1">{activeCurrency?.code}</span>
                 </span>
               </div>
@@ -257,7 +265,7 @@ export default function Checkout() {
                 <><Loader2 className="animate-spin" size={20} /> Processing...</>
               ) : (
                 <>
-                  <Lock size={18} /> Place Order - {activeCurrency?.symbol}{displaySubtotal()}
+                  <Lock size={18} /> Place Order - {displaySubtotal()}
                 </>
               )}
             </button>

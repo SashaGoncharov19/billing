@@ -37,8 +37,8 @@ export interface Product {
   name: string
   description?: string
   price: string | number
+  setupFee?: string | number
   currency: string
-  taxRate?: string | number
   billingType: string
   billingInterval?: string
   pluginType?: string

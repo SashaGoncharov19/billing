@@ -57,6 +57,13 @@
       "when": 1776116391202,
       "tag": "0007_flowery_hydra",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1776118622594,
+      "tag": "0008_good_eternals",
+      "breakpoints": true
     }
   ]
 }

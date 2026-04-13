@@ -12,7 +12,7 @@ export default function Dashboard() {
         className="flex justify-between items-end"
       >
         <h1 className="text-3xl font-bold tracking-tight">
-          Welcome back, {user?.email?.split('@')[0] || 'User'}! 👋
+          Welcome back, {user?.firstName || user?.email?.split('@')[0] || 'User'}! 👋
         </h1>
       </motion.div>
 
@@ -64,24 +64,15 @@ export default function Dashboard() {
         </div>
         <div className="col-span-3 rounded-2xl border bg-card text-card-foreground shadow-sm bg-gradient-to-br from-card to-muted/20">
           <div className="p-6 flex flex-col space-y-1.5 border-b border-border/50">
-            <h3 className="font-semibold leading-none tracking-tight">Active Subscription</h3>
+            <h3 className="font-semibold leading-none tracking-tight">Workspace Info</h3>
           </div>
           <div className="p-6 pt-6">
             <div className="space-y-4">
               <div>
-                <div className="text-sm text-muted-foreground font-medium uppercase tracking-wider mb-1">
-                  Current Workspace
-                </div>
                 <div className="font-semibold flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-green-500"></div>
                   {tenant?.name || 'Personal'}
                 </div>
-              </div>
-              <div className="pt-4 border-t border-border/50 flex justify-between items-center">
-                <span className="text-sm font-medium">Free Plan</span>
-                <button className="text-xs bg-foreground text-background px-3 py-1.5 rounded-md font-medium hover:scale-105 transition-transform">
-                  Upgrade
-                </button>
               </div>
             </div>
           </div>

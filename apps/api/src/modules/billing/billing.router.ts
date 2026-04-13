@@ -2,12 +2,12 @@ import { Elysia } from 'elysia'
 import { BillingService } from './billing.service'
 import { CheckoutDto, PortalDto } from './billing.schema'
 import { t } from 'elysia'
-import { db, products, invoices, invoiceItems, currencies, paymentMethods, users, taxRates } from '@entityseven/db'
+import { db, products, invoices, invoiceItems, currencies, users, taxRates, paymentMethods } from '@entityseven/db'
 import { eq, and } from 'drizzle-orm'
 import { authenticate } from '../../middleware/authenticate'
 import { resolveTenant } from '../../middleware/tenant'
 import { getPaymentProvider } from '../../providers/provider.factory'
-import { webhookQueue, pdfQueue } from '../../queue/index'
+import { webhookQueue, pdfQueue } from '../../queue'
 
 export const billingRouter = new Elysia({ prefix: '/billing' })
   .use(authenticate)
@@ -80,16 +80,27 @@ export const billingRouter = new Elysia({ prefix: '/billing' })
       if (!product) throw new Error(`Product ${item.productId} not found`)
       
       const itemPriceConverted = Number(product.price) * rate
-      const itemTotal = itemPriceConverted * item.quantity
+      const itemSetupFeeConverted = product.setupFee ? Number(product.setupFee) * rate : 0
+      const itemTotal = (itemPriceConverted + itemSetupFeeConverted) * item.quantity
       totalBaseAmount += itemTotal
 
       invoiceItemsData.push({
         productId: product.id,
         description: product.name,
         unitPrice: itemPriceConverted.toFixed(2),
-        totalAmount: itemTotal.toFixed(2),
+        totalAmount: (itemPriceConverted * item.quantity).toFixed(2),
         quantity: item.quantity,
       })
+      
+      if (itemSetupFeeConverted > 0) {
+        invoiceItemsData.push({
+          productId: product.id,
+          description: `${product.name} (Setup Fee)`,
+          unitPrice: itemSetupFeeConverted.toFixed(2),
+          totalAmount: (itemSetupFeeConverted * item.quantity).toFixed(2),
+          quantity: item.quantity,
+        })
+      }
     }
 
     const taxAmount = totalBaseAmount * appliedTaxRate

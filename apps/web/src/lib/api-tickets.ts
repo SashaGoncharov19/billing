@@ -9,6 +9,8 @@ export interface UserSnippet {
   id: string
   email: string
   role?: string
+  firstName?: string | null
+  lastName?: string | null
   billingName?: string | null
   billingCountry?: string | null
 }

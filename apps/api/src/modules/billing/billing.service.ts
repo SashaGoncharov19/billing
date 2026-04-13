@@ -1,5 +1,5 @@
 import { getPaymentProvider } from '../../providers/provider.factory'
-import { db, products, tenants, subscriptions, memberships, users } from '@entityseven/db'
+import { db, tenants, subscriptions, memberships, users } from '@entityseven/db'
 import { eq, and } from 'drizzle-orm'
 
 export class BillingService {
@@ -77,9 +77,20 @@ export class BillingService {
     }
     const customerId = await this.getCustomerForTenant(tenantId)
     
-    const lineItems = items.map(item => {
-       const product = dbProducts.find(p => p.id === item.productId)
-       return { priceId: product!.stripePriceId!, quantity: item.quantity }
+    const lineItems: any[] = []
+    items.forEach(item => {
+       const product = dbProducts.find(p => p.id === item.productId)!
+       lineItems.push({ priceId: product.stripePriceId!, quantity: item.quantity })
+       if (product.setupFee && Number(product.setupFee) > 0) {
+           lineItems.push({
+              priceData: {
+                 currency: product.currency?.toLowerCase() || 'usd',
+                 product_data: { name: `${product.name} (Setup Fee)` },
+                 unit_amount: Math.round(Number(product.setupFee) * 100)
+              },
+              quantity: item.quantity
+           })
+       }
     })
 
     const session = await this.provider.createCheckoutSession({

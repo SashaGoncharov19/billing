@@ -5,6 +5,8 @@ export interface CartItem {
   productId: string
   name: string
   price: string // Base price without tax/currency mapping yet
+  setupFee?: string
+  currency: string
   billingType: string
   quantity: number
 }

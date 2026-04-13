@@ -51,7 +51,12 @@ export class StripeProvider implements PaymentProvider {
 
   async createCheckoutSession(data: CreateCheckoutSessionData) {
     const line_items = data.lineItems 
-      ? data.lineItems.map(li => ({ price: li.priceId, quantity: li.quantity }))
+      ? data.lineItems.map(li => {
+          const item: any = { quantity: li.quantity };
+          if (li.priceId) item.price = li.priceId;
+          if (li.priceData) item.price_data = li.priceData;
+          return item;
+        })
       : data.priceId 
         ? [{ price: data.priceId, quantity: data.quantity ?? 1 }]
         : [];

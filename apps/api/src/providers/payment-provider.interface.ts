@@ -9,7 +9,7 @@ export interface CreateCheckoutSessionData {
   tenantId: string
   customerId: string
   priceId?: string           // Stripe Price ID or internal product ID
-  lineItems?: { priceId: string, quantity: number }[]
+  lineItems?: { priceId?: string, priceData?: { currency: string, product_data: { name: string }, unit_amount: number }, quantity: number }[]
   successUrl: string
   cancelUrl: string
   metadata?: Record<string, string>

@@ -6,6 +6,8 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+  firstName: varchar('first_name', { length: 255 }),
+  lastName: varchar('last_name', { length: 255 }),
   preferredLanguage: varchar('preferred_language', { length: 10 }).default('en').notNull(),
   theme: themeEnum('theme').default('light').notNull(),
   billingName: varchar('billing_name', { length: 255 }),

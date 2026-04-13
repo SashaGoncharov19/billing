@@ -59,11 +59,20 @@ export default function ShopList() {
                 </p>
 
                 <div className="border-t border-border/50 pt-4 mt-auto">
-                  <div className="flex items-end gap-1 mb-4">
-                    <span className="text-3xl font-extrabold tracking-tight">${Number(product.price).toFixed(2)}</span>
-                    <span className="text-muted-foreground font-medium mb-1 uppercase text-xs">
-                       {product.currency} {product.billingType === 'recurring' ? `/ ${product.billingInterval}` : ''}
-                    </span>
+                  <div className="flex flex-col gap-1 mb-4">
+                    <div className="flex items-end gap-1">
+                      <span className="text-3xl font-extrabold tracking-tight">
+                        {new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency || 'USD' }).format(Number(product.price))}
+                      </span>
+                      <span className="text-muted-foreground font-medium mb-1 uppercase text-xs">
+                         {product.billingType === 'recurring' ? `/ ${product.billingInterval}` : ''}
+                      </span>
+                    </div>
+                    {product.setupFee && Number(product.setupFee) > 0 && (
+                      <span className="text-sm text-primary font-medium">
+                        + {new Intl.NumberFormat('en-US', { style: 'currency', currency: product.currency || 'USD' }).format(Number(product.setupFee))} setup
+                      </span>
+                    )}
                   </div>
 
                   <Link 
