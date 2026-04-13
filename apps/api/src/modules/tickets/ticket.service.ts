@@ -1,13 +1,7 @@
 import { db, tickets, ticketComments, memberships, users } from '@entityseven/db'
-import { eq, and, desc, lt, asc, or, type SQL } from 'drizzle-orm'
+import { eq, and, desc, asc, or, type SQL } from 'drizzle-orm'
 import { TicketStatus, TicketPriority, VALID_TICKET_TRANSITIONS, InvalidTicketTransitionError } from './ticket.types'
-
-// Mocking BullMQ structure for now
-export const emailQueue = {
-  add: async (jobName: string, data: any) => {
-    console.log(`[Queue] Added job ${jobName}:`, data)
-  }
-}
+import { emailQueue } from '../../queue'
 
 export class TicketService {
   private validateTransition(current: TicketStatus, next: TicketStatus) {
@@ -27,9 +21,9 @@ export class TicketService {
         status: 'open',
         priority: (data.priority as TicketPriority) || 'medium',
       }).returning()
-      
+
       if (!ticket) throw new Error('Failed to create ticket')
-      
+
       const adminUsers = await tx.select({ email: users.email })
         .from(memberships)
         .innerJoin(users, eq(users.id, memberships.userId))
@@ -52,7 +46,7 @@ export class TicketService {
 
   async getTickets(tenantId: string, userId: string, role: string, filters: { status?: string | undefined; priority?: string | undefined; assignedToMe?: boolean | undefined; limit?: number | undefined }) {
     const conditions: SQL[] = [eq(tickets.tenantId, tenantId)]
-    
+
     // RBAC: members only see their own tickets
     if (role !== 'admin' && role !== 'owner') {
       conditions.push(eq(tickets.createdByUserId, userId))
@@ -74,10 +68,11 @@ export class TicketService {
   }
 
   async getTicketById(tenantId: string, ticketId: string, userId: string, role: string) {
-    const conditions: SQL[] = [eq(tickets.id, ticketId), eq(tickets.tenantId, tenantId)]
-    
+    const conditions: SQL[] = [eq(tickets.id, ticketId)]
+
     // RBAC check
     if (role !== 'admin' && role !== 'owner') {
+      conditions.push(eq(tickets.tenantId, tenantId))
       conditions.push(eq(tickets.createdByUserId, userId))
     }
 
@@ -104,10 +99,15 @@ export class TicketService {
     return { ...ticket, comments }
   }
 
-  async updateTicket(tenantId: string, ticketId: string, updates: { status?: string; priority?: string; assignedToUserId?: string | null }) {
+  async updateTicket(tenantId: string, ticketId: string, updates: { status?: string; priority?: string; assignedToUserId?: string | null }, role?: string) {
     return await db.transaction(async (tx) => {
+      const conditions: SQL[] = [eq(tickets.id, ticketId)]
+      if (role !== 'admin' && role !== 'owner') {
+        conditions.push(eq(tickets.tenantId, tenantId))
+      }
+
       const ticket = await tx.query.tickets.findFirst({
-        where: and(eq(tickets.id, ticketId), eq(tickets.tenantId, tenantId))
+        where: and(...conditions)
       })
 
       if (!ticket) throw new Error('Ticket not found')
@@ -117,10 +117,10 @@ export class TicketService {
       if (updates.status && updates.status !== ticket.status) {
         this.validateTransition(ticket.status as TicketStatus, updates.status as TicketStatus)
         valuesToUpdate.status = updates.status as TicketStatus
-        
+
         if (updates.status === 'resolved') valuesToUpdate.resolvedAt = new Date()
         if (updates.status === 'closed') valuesToUpdate.closedAt = new Date()
-        
+
         const customer = await tx.query.users.findFirst({ where: eq(users.id, ticket.createdByUserId) })
         if (customer) {
           await emailQueue.add('send-email', {
@@ -132,18 +132,18 @@ export class TicketService {
       }
 
       if (updates.priority) valuesToUpdate.priority = updates.priority as TicketPriority
-      
+
       if (updates.assignedToUserId !== undefined) {
         valuesToUpdate.assignedToUserId = updates.assignedToUserId
         if (updates.assignedToUserId && updates.assignedToUserId !== ticket.assignedToUserId) {
-           const assignee = await tx.query.users.findFirst({ where: eq(users.id, updates.assignedToUserId) })
-           if (assignee) {
-             await emailQueue.add('send-email', {
-               to: assignee.email,
-               subject: `[Ticket Assigned] A ticket has been assigned to you`,
-               body: `You are now the assignee of ticket ${ticket.id}`
-             })
-           }
+          const assignee = await tx.query.users.findFirst({ where: eq(users.id, updates.assignedToUserId) })
+          if (assignee) {
+            await emailQueue.add('send-email', {
+              to: assignee.email,
+              subject: `[Ticket Assigned] A ticket has been assigned to you`,
+              body: `You are now the assignee of ticket ${ticket.id}`
+            })
+          }
         }
       }
 
@@ -159,8 +159,9 @@ export class TicketService {
   async addComment(tenantId: string, ticketId: string, userId: string, role: string, data: { body: string; isInternal?: boolean }) {
     return await db.transaction(async (tx) => {
       // Must verify ticket existence/access
-      const conditions: SQL[] = [eq(tickets.id, ticketId), eq(tickets.tenantId, tenantId)]
+      const conditions: SQL[] = [eq(tickets.id, ticketId)]
       if (role !== 'admin' && role !== 'owner') {
+        conditions.push(eq(tickets.tenantId, tenantId))
         conditions.push(eq(tickets.createdByUserId, userId))
       }
 
@@ -195,38 +196,38 @@ export class TicketService {
       // Notify
       if (!isInternal) {
         if (role === 'admin' || role === 'owner') {
-            const customer = await tx.query.users.findFirst({ where: eq(users.id, ticket.createdByUserId) })
-            if (customer) {
-              await emailQueue.add('send-email', {
-                to: customer.email,
-                subject: `[Ticket Response] New comment on your ticket`,
-                body: `An agent replied: ${data.body}`
-              })
-            }
+          const customer = await tx.query.users.findFirst({ where: eq(users.id, ticket.createdByUserId) })
+          if (customer) {
+            await emailQueue.add('send-email', {
+              to: customer.email,
+              subject: `[Ticket Response] New comment on your ticket`,
+              body: `An agent replied: ${data.body}`
+            })
+          }
         } else {
-            // Find assignee or fallback to all admins
-            let emails: string[] = []
-            if (ticket.assignedToUserId) {
-              const assignee = await tx.query.users.findFirst({ where: eq(users.id, ticket.assignedToUserId) })
-              if (assignee) emails.push(assignee.email)
-            } else {
-              const adminUsers = await tx.select({ email: users.email })
-                .from(memberships)
-                .innerJoin(users, eq(users.id, memberships.userId))
-                .where(and(
-                  eq(memberships.tenantId, tenantId),
-                  or(eq(memberships.role, 'admin'), eq(memberships.role, 'owner'))
-                ))
-              emails = adminUsers.map((a: { email: string }) => a.email)
-            }
-            
-            for (const email of emails) {
-              await emailQueue.add('send-email', {
-                to: email,
-                subject: `[Ticket Response] Customer replied`,
-                body: `The customer replied: ${data.body}`
-              })
-            }
+          // Find assignee or fallback to all admins
+          let emails: string[] = []
+          if (ticket.assignedToUserId) {
+            const assignee = await tx.query.users.findFirst({ where: eq(users.id, ticket.assignedToUserId) })
+            if (assignee) emails.push(assignee.email)
+          } else {
+            const adminUsers = await tx.select({ email: users.email })
+              .from(memberships)
+              .innerJoin(users, eq(users.id, memberships.userId))
+              .where(and(
+                eq(memberships.tenantId, tenantId),
+                or(eq(memberships.role, 'admin'), eq(memberships.role, 'owner'))
+              ))
+            emails = adminUsers.map((a: { email: string }) => a.email)
+          }
+
+          for (const email of emails) {
+            await emailQueue.add('send-email', {
+              to: email,
+              subject: `[Ticket Response] Customer replied`,
+              body: `The customer replied: ${data.body}`
+            })
+          }
         }
       }
 

@@ -5,7 +5,7 @@ import { eq, count, sum, desc } from 'drizzle-orm'
 import { authenticate } from '../../middleware/authenticate'
 import { ForbiddenError } from '../../middleware/error-handler'
 
-export const adminRouter = new Elysia({ prefix: '/api/admin', name: 'admin.router' })
+export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.router' })
   .use(authenticate)
   .derive(({ user }) => {
     if (user.role !== 'owner' && user.role !== 'admin') {
@@ -68,7 +68,29 @@ export const adminRouter = new Elysia({ prefix: '/api/admin', name: 'admin.route
     const items = await db.select().from(invoices).orderBy(desc(invoices.createdAt)).limit(100)
     return items
   })
-  .get('/tickets', async () => {
-    const list = await db.select().from(tickets).orderBy(desc(tickets.createdAt)).limit(100)
-    return list
+  .get('/tickets', async ({ query }) => {
+    let q = db.select().from(tickets).$dynamic()
+
+    if (query?.status) {
+      q = q.where(eq(tickets.status, query.status))
+    }
+
+    const page = query?.page || 1
+    const limit = query?.limit || 100
+    const offset = (page - 1) * limit
+
+    const list = await q.orderBy(desc(tickets.createdAt)).limit(limit).offset(offset)
+    return { data: list, metadata: { page, limit } }
+  }, {
+    query: t.Optional(t.Object({
+      status: t.Optional(t.Union([
+        t.Literal('open'),
+        t.Literal('in_progress'),
+        t.Literal('waiting_customer'),
+        t.Literal('resolved'),
+        t.Literal('closed')
+      ])),
+      page: t.Optional(t.Numeric()),
+      limit: t.Optional(t.Numeric())
+    }))
   })

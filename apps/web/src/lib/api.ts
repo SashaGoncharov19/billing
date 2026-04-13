@@ -1,41 +1,63 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
+import axios from 'axios'
+import { useAuthStore } from '../store/auth.store'
 
-interface ApiOptions extends RequestInit {
-  token?: string
-}
-
-export async function apiRequest<T>(
-  path: string,
-  options: ApiOptions = {}
-): Promise<T> {
-  const { token, ...init } = options
-
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init.headers,
-    },
-    credentials: 'include',  // для cookies (refresh token)
-  })
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Unknown error' }))
-    throw new ApiError(response.status, error.code, error.message, error.details)
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || '/api/v1',
+  withCredentials: true, // Enables sending and receiving cookies
+  headers: {
+    'Content-Type': 'application/json'
   }
+})
 
-  if (response.status === 204) return undefined as T
-  return response.json() as Promise<T>
-}
+// Request interceptor to attach access token
+api.interceptors.request.use(
+  (config) => {
+    const token = useAuthStore.getState().accessToken
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => Promise.reject(error)
+)
 
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    public code: string,
-    message: string,
-    public details?: unknown
-  ) {
-    super(message)
+// Response interceptor to handle 401 & automatic refresh
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config
+    
+    // Ignore refresh endpoint errors to prevent infinite loops
+    if (originalRequest.url === '/auth/refresh') {
+      return Promise.reject(error)
+    }
+
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true
+      
+      try {
+        // Attempt to refresh the token using the httpOnly cookie
+        const res = await axios.post(
+          `${api.defaults.baseURL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        )
+        
+        const newAccessToken = res.data.accessToken
+        useAuthStore.getState().setToken(newAccessToken)
+        
+        // Re-run the failed original request with new token
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+        return axios(originalRequest)
+      } catch (err) {
+        // Refresh failed (e.g. cookie expired), clear state
+        useAuthStore.getState().logout()
+        return Promise.reject(err)
+      }
+    }
+    
+    return Promise.reject(error)
   }
-}
+)
+
+export default api

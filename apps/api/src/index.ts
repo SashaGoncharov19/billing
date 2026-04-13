@@ -24,6 +24,7 @@ import './queue/workers/pdf.worker'
 import './queue/workers/webhook.worker'
 import './queue/workers/dlq.worker'
 import { initScheduler } from './queue/workers/scheduler.worker'
+import { bootstrapDatabase } from './lib/seeder'
 
 // Initialize CRON jobs
 if (process.env.NODE_ENV !== 'test') {
@@ -72,6 +73,8 @@ export const app = new Elysia()
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(bullBoard.registerPlugin())
+  // Automatically seed admin if the DB is fresh
+  bootstrapDatabase().catch(e => logger.error('Bootstrap failed', e))
 }
 
 app.listen(config.API_PORT)

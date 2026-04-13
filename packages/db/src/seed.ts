@@ -10,10 +10,16 @@ async function main() {
     slug: 'es-demo'
   }).returning()
 
+  const hashedPassword = await Bun.password.hash('admin123', {
+    algorithm: 'argon2id',
+    memoryCost: 65536,
+    timeCost: 3,
+  })
+
   // 2. Create admin user
   const [user] = await db.insert(schema.users).values({
     email: 'admin@entityseven.com',
-    passwordHash: '$2a$12$R9h/cIPz0gi.URNNX3N1xO...' // Fake hash for seed
+    passwordHash: hashedPassword
   }).returning()
 
   // 3. Create membership

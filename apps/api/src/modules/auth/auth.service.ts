@@ -34,7 +34,7 @@ export class AuthService {
       await tx.insert(memberships).values({
         userId: newUser.id,
         tenantId: newTenant.id,
-        role: 'owner',
+        role: 'member',
         joinedAt: new Date()
       })
 

@@ -1,9 +1,9 @@
 import { db, tenants, memberships, users } from '@entityseven/db'
-import { eq, and, ne } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 import { write } from 'bun'
 import { join } from 'path'
 import { mkdir } from 'fs/promises'
-import { emailQueue } from '../../queue/index'
+import { emailQueue } from '../../queue'
 
 export class TenantService {
   /**
