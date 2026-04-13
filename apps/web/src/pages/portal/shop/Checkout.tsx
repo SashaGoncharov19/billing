@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { useStoreProduct, useStorePaymentMethods, useStoreCurrencies, useCheckoutMutation } from '@/lib/api-store'
+import { useStoreProduct, useStorePaymentMethods, useStoreCurrencies, useCheckoutMutation, useManualCheckoutMutation } from '@/lib/api-store'
 import { CreditCard, Loader2, Lock, Receipt, ChevronRight } from 'lucide-react'
 
 export default function Checkout() {
@@ -10,6 +10,7 @@ export default function Checkout() {
   const { data: paymentMethods, isLoading: loadingMethods } = useStorePaymentMethods()
   const { data: currencies } = useStoreCurrencies()
   const checkoutMutation = useCheckoutMutation()
+  const manualCheckoutMutation = useManualCheckoutMutation()
   
   const [selectedMethod, setSelectedMethod] = useState<string>('')
   const [selectedCurrencyId, setSelectedCurrencyId] = useState<string>('')
@@ -57,12 +58,11 @@ export default function Checkout() {
     } else if (chosenPm?.type === 'manual') {
        // Manual invoice creation
        try {
-         const res = await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/billing/manual-checkout`, {
-           method: 'POST',
-           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('token')}` },
-           body: JSON.stringify({ productId: product.id, paymentMethodId: chosenPm.id, currencyId: selectedCurrencyId })
+         const data = await manualCheckoutMutation.mutateAsync({ 
+           productId: product.id, 
+           paymentMethodId: chosenPm.id, 
+           currencyId: selectedCurrencyId 
          })
-         const data = await res.json()
          if (data.invoiceId) {
             navigate('/dashboard?checkout=manual_pending')
          }

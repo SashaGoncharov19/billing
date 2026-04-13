@@ -12,5 +12,12 @@ export const AuthSchema = {
   }),
   SwitchTenant: t.Object({
     tenantId: t.String({ format: 'uuid' })
+  }),
+  UpdateMe: t.Object({
+    billingName: t.Optional(t.String()),
+    billingAddress: t.Optional(t.String()),
+    billingTaxId: t.Optional(t.String()),
+    billingEmail: t.Optional(t.String()),
+    billingCountry: t.Optional(t.String()),
   })
 }

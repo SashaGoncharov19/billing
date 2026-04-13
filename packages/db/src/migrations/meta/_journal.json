@@ -29,6 +29,13 @@
       "when": 1776049334139,
       "tag": "0003_awesome_lady_mastermind",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1776092821750,
+      "tag": "0004_silky_klaw",
+      "breakpoints": true
     }
   ]
 }

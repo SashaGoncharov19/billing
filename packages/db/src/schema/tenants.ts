@@ -9,6 +9,11 @@ export const tenants = pgTable('tenants', {
   secondaryColor: varchar('secondary_color', { length: 7 }),
   customCss: text('custom_css'),                             // кастомний CSS для white-label
   stripeCustomerId: varchar('stripe_customer_id', { length: 255 }),
+  billingEntity: varchar('billing_entity', { length: 255 }),
+  billingAddress: text('billing_address'),
+  billingTaxId: varchar('billing_tax_id', { length: 100 }),
+  billingEmail: varchar('billing_email', { length: 255 }),
+  billingCountry: varchar('billing_country', { length: 2 }), // ISO-3166-1 alpha-2
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

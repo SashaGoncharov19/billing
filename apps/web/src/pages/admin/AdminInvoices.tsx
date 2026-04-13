@@ -1,0 +1,137 @@
+import { useState } from 'react'
+import { useAdminInvoices, useAdminInvoicePay, useAdminInvoicePdf } from '@/lib/api-admin'
+import type { Invoice } from '@/lib/api-admin'
+import { Receipt, Download, Loader2, CheckCircle2, FileText } from 'lucide-react'
+import { toast } from 'sonner'
+import { format } from 'date-fns'
+
+export default function AdminInvoices() {
+  const [filter, setFilter] = useState<string>('')
+  const { data: invoices, isLoading } = useAdminInvoices(filter || undefined)
+  const markPaid = useAdminInvoicePay()
+  const getPdf = useAdminInvoicePdf()
+
+  const [loadingPdfId, setLoadingPdfId] = useState<string | null>(null)
+
+  const handleDownload = async (id: string, pdfUrl?: string) => {
+    if (!pdfUrl) {
+      toast.info('PDF is still generating...')
+      return
+    }
+    try {
+      setLoadingPdfId(id)
+      const url = await getPdf.mutateAsync(id)
+      window.open(url, '_blank')
+    } catch(e) {
+      toast.error('Could not fetch PDF')
+    } finally {
+      setLoadingPdfId(null)
+    }
+  }
+
+  const handleMarkPaid = async (id: string) => {
+    if(!confirm('Are you sure you want to mark this invoice as paid manually? This will grant the user their products.')) return
+    try {
+      await markPaid.mutateAsync(id)
+      toast.success('Invoice marked as paid!')
+    } catch(e: any) {
+      toast.error(e.response?.data?.message || 'Failed to mark as paid')
+    }
+  }
+
+  const badgeColor = (status: string) => {
+    switch(status) {
+      case 'paid': return 'bg-green-100 text-green-800 border-green-200'
+      case 'open': return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'draft': return 'bg-gray-100 text-gray-800 border-gray-200'
+      default: return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
+          <p className="text-muted-foreground">Manage all user invoices and payments.</p>
+        </div>
+        <div className="flex gap-2">
+          <select 
+            value={filter} 
+            onChange={e => setFilter(e.target.value)}
+            className="p-2 border rounded-md bg-card text-sm"
+          >
+            <option value="">All Statuses</option>
+            <option value="open">Open</option>
+            <option value="paid">Paid</option>
+            <option value="draft">Draft</option>
+            <option value="void">Void</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="bg-card border rounded-xl overflow-hidden">
+        {isLoading ? (
+          <div className="p-12 flex justify-center text-muted-foreground"><Loader2 className="animate-spin" /></div>
+        ) : invoices?.length === 0 ? (
+          <div className="p-16 text-center text-muted-foreground flex flex-col items-center">
+            <Receipt size={48} className="opacity-20 mb-4" />
+            <p>No invoices found.</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm text-left">
+            <thead className="bg-muted/50 border-b uppercase text-xs text-muted-foreground">
+              <tr>
+                <th className="px-6 py-4">Number</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">User ID </th>
+                <th className="px-6 py-4">Issued</th>
+                <th className="px-6 py-4">Amount</th>
+                <th className="px-6 py-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {invoices?.map((inv: Invoice) => (
+                <tr key={inv.id} className="border-b last:border-0 hover:bg-muted/20">
+                  <td className="px-6 py-4 font-mono font-medium">#{String(inv.number).padStart(6, '0')}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-1 text-xs uppercase font-bold rounded-full border ${badgeColor(inv.status)}`}>
+                      {inv.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 truncate max-w-[150px]">{inv.createdByUserId || 'System'}</td>
+                  <td className="px-6 py-4 text-muted-foreground">
+                    {inv.issuedAt ? format(new Date(inv.issuedAt), 'MMM d, yyyy') : 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 font-semibold">
+                    {Number(inv.totalAmount).toLocaleString('en-US', { style: 'currency', currency: inv.currency })}
+                  </td>
+                  <td className="px-6 py-4 text-right flex justify-end gap-2">
+                    {inv.status === 'open' && (
+                      <button 
+                        onClick={() => handleMarkPaid(inv.id)}
+                        disabled={markPaid.isPending}
+                        title="Mark as Paid"
+                        className="p-2 hover:bg-green-100 text-green-600 rounded-md disabled:opacity-50"
+                      >
+                        <CheckCircle2 size={16} />
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => handleDownload(inv.id, inv.pdfUrl)}
+                      disabled={loadingPdfId === inv.id}
+                      title={inv.pdfUrl ? "Download PDF" : "PDF Processing..."}
+                      className={`p-2 rounded-md ${inv.pdfUrl ? 'hover:bg-primary/10 text-primary' : 'text-muted-foreground opacity-50 cursor-not-allowed'}`}
+                    >
+                      {loadingPdfId === inv.id ? <Loader2 size={16} className="animate-spin" /> : inv.pdfUrl ? <Download size={16} /> : <FileText size={16} />}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  )
+}

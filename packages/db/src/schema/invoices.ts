@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, numeric, timestamp, pgEnum, index, integer, unique } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, varchar, numeric, timestamp, pgEnum, index, integer, unique, jsonb } from 'drizzle-orm/pg-core'
 import { tenants } from './tenants'
 import { users } from './users'
 
@@ -16,6 +16,8 @@ export const invoices = pgTable('invoices', {
   paidAmount: numeric('paid_amount', { precision: 12, scale: 2 }).default('0').notNull(),
   notes: varchar('notes', { length: 2000 }),
   pdfUrl: varchar('pdf_url', { length: 2000 }),      // S3/R2 URL
+  issuerDetails: jsonb('issuer_details'),            // Frozen tenant snapshot
+  recipientDetails: jsonb('recipient_details'),      // Frozen user snapshot
   createdByUserId: uuid('created_by_user_id').references(() => users.id),
   issuedAt: timestamp('issued_at', { withTimezone: true }),
   dueAt: timestamp('due_at', { withTimezone: true }),

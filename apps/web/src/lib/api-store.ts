@@ -1,4 +1,4 @@
-import { useQuery, useMutation } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from './api'
 import type { Product, Currency, PaymentMethod } from './api-admin'
 
@@ -62,6 +62,57 @@ export const useCheckoutMutation = () => {
         cancelUrl: payload.cancelUrl
       })
       return data
+    }
+  })
+}
+
+export const useManualCheckoutMutation = () => {
+  return useMutation({
+    mutationFn: async (payload: { productId: string, paymentMethodId: string, currencyId?: string }) => {
+      const { data } = await api.post<{ invoiceId: string }>('/billing/manual-checkout', payload)
+      return data
+    }
+  })
+}
+
+// Portal user hooks
+export const usePortalMe = () => {
+  return useQuery({
+    queryKey: ['portal', 'me'],
+    queryFn: async () => {
+      const { data } = await api.get('/auth/me')
+      return data
+    }
+  })
+}
+
+export const usePortalUpdateMe = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const { data } = await api.patch('/auth/me', payload)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['portal', 'me'] })
+  })
+}
+
+export const usePortalInvoices = () => {
+  return useQuery({
+    queryKey: ['portal', 'invoices'],
+    queryFn: async () => {
+      // For a portal user, status isn't necessarily filtered, just all their invoices
+      const { data } = await api.get('/invoices')
+      return data.data
+    }
+  })
+}
+
+export const usePortalInvoicePdf = () => {
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.get<{ url: string }>(`/invoices/${id}/pdf`)
+      return data.url
     }
   })
 }

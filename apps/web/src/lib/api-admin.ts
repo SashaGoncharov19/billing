@@ -63,6 +63,35 @@ export interface PaymentMethod {
   isActive: boolean
 }
 
+export interface Invoice {
+  id: string
+  number: number
+  status: 'draft' | 'open' | 'paid' | 'void' | 'uncollectible'
+  currency: string
+  subtotalAmount: string
+  taxAmount: string
+  totalAmount: string
+  paidAmount: string
+  pdfUrl?: string
+  createdByUserId?: string
+  issuedAt?: string
+  dueAt?: string
+  paidAt?: string
+  voidedAt?: string
+  createdAt: string
+  items?: any[]
+}
+
+export interface Tenant {
+  id: string
+  name: string
+  billingEntity?: string
+  billingAddress?: string
+  billingTaxId?: string
+  billingEmail?: string
+  billingCountry?: string
+}
+
 // Hooks
 export const adminKeys = {
   all: ['admin'] as const,
@@ -74,6 +103,8 @@ export const adminKeys = {
   products: () => [...adminKeys.all, 'products'] as const,
   currencies: () => [...adminKeys.all, 'currencies'] as const,
   paymentMethods: () => [...adminKeys.all, 'paymentMethods'] as const,
+  invoices: () => [...adminKeys.all, 'invoices'] as const,
+  tenant: () => [...adminKeys.all, 'tenant'] as const,
 }
 
 export const useAdminStats = () => {
@@ -269,5 +300,56 @@ export const useAdminDeletePaymentMethod = () => {
       return data
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.paymentMethods() })
+  })
+}
+
+export const useAdminTenant = () => {
+  return useQuery({
+    queryKey: adminKeys.tenant(),
+    queryFn: async () => {
+      const { data } = await api.get('/tenants/current')
+      return data
+    }
+  })
+}
+
+export const useAdminUpdateTenant = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const { data } = await api.patch('/tenants/current', payload)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.tenant() })
+  })
+}
+
+export const useAdminInvoices = (statusFilter?: string) => {
+  return useQuery({
+    queryKey: [...adminKeys.invoices(), statusFilter],
+    queryFn: async () => {
+      const { data } = await api.get<{ data: Invoice[] }>('/invoices', { params: { status: statusFilter } })
+      return data.data
+    }
+  })
+}
+
+export const useAdminInvoicePay = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.post(`/invoices/${id}/pay`)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.invoices() })
+  })
+}
+
+export const useAdminInvoicePdf = () => {
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.get<{ url: string }>(`/invoices/${id}/pdf`)
+      return data.url
+    }
   })
 }

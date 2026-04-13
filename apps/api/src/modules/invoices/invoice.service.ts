@@ -1,9 +1,9 @@
-import { db, invoices, invoiceItems, tenants } from '@entityseven/db'
-import { eq, and, desc, asc, type SQL } from 'drizzle-orm'
+import { db, invoices, invoiceItems } from '@entityseven/db'
+import { eq, and, desc, type SQL } from 'drizzle-orm'
 import { InvoiceStatus, VALID_TRANSITIONS, InvalidTransitionError } from './invoice.types'
 import { getNextInvoiceNumber } from './invoice.numbering'
 import { getInvoiceSignedUrl } from './invoice.pdf'
-import { pdfQueue } from '../../queue/index'
+import { pdfQueue } from '../../queue'
 
 export class InvoiceService {
   private validateTransition(current: InvoiceStatus, next: InvoiceStatus) {
@@ -67,12 +67,14 @@ export class InvoiceService {
     })
   }
 
-  async getInvoices(tenantId: string, status?: string) {
+  async getInvoices(tenantId: string, status?: string, userId?: string) {
     const limit = 50
-    // Cursor handling omitted for simplified setup in this step
     const conditions: SQL[] = [eq(invoices.tenantId, tenantId)]
     if (status) {
       conditions.push(eq(invoices.status, status as InvoiceStatus))
+    }
+    if (userId) {
+      conditions.push(eq(invoices.createdByUserId, userId))
     }
 
     const data = await db.query.invoices.findMany({
@@ -158,5 +160,28 @@ export class InvoiceService {
       throw new Error('PDF not generated yet')
     }
     return getInvoiceSignedUrl(invoice.pdfUrl, 3600)
+  }
+
+  async markPaid(tenantId: string, invoiceId: string) {
+    return await db.transaction(async (tx) => {
+      const invoice = await tx.query.invoices.findFirst({
+        where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId))
+      })
+
+      if (!invoice) throw new Error('Invoice not found')
+      this.validateTransition(invoice.status as InvoiceStatus, 'paid')
+
+      const [updated] = await tx.update(invoices)
+        .set({
+          status: 'paid',
+          paidAmount: invoice.totalAmount,
+          paidAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(invoices.id, invoiceId))
+        .returning()
+        
+      return updated
+    })
   }
 }

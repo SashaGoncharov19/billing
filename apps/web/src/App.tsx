@@ -23,11 +23,16 @@ import TicketDetail from './pages/portal/tickets/TicketDetail'
 import ShopList from './pages/portal/shop/ShopList'
 import ProductDetail from './pages/portal/shop/ProductDetail'
 import Checkout from './pages/portal/shop/Checkout'
+import PortalInvoices from './pages/portal/PortalInvoices'
+import AccountBillingProfile from './pages/portal/AccountBillingProfile'
 
 import AdminTickets from './pages/admin/AdminTickets'
 import AdminProducts from './pages/admin/AdminProducts'
 import AdminCurrencies from './pages/admin/AdminCurrencies'
 import AdminPaymentMethods from './pages/admin/AdminPaymentMethods'
+
+import AdminSettings from './pages/admin/AdminSettings'
+import AdminInvoices from './pages/admin/AdminInvoices'
 
 function App() {
   const [theme] = useState<'dark' | 'light' | 'system'>(() => {
@@ -71,6 +76,8 @@ function App() {
           <Route path="products" element={<AdminProducts />} />
           <Route path="currencies" element={<AdminCurrencies />} />
           <Route path="payment-methods" element={<AdminPaymentMethods />} />
+          <Route path="settings" element={<AdminSettings />} />
+          <Route path="invoices" element={<AdminInvoices />} />
         </Route>
 
         <Route path="/" element={
@@ -80,7 +87,7 @@ function App() {
         }>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
-          <Route path="invoices" element={<div className="p-4 bg-card rounded-xl border">Invoices coming soon</div>} />
+          <Route path="invoices" element={<PortalInvoices />} />
           
           <Route path="tickets" element={<TicketsList />} />
           <Route path="tickets/new" element={<CreateTicket />} />
@@ -90,7 +97,7 @@ function App() {
           <Route path="shop/:id" element={<ProductDetail />} />
           <Route path="shop/checkout/:id" element={<Checkout />} />
           
-          <Route path="settings" element={<div className="p-4 bg-card rounded-xl border">Settings coming soon</div>} />
+          <Route path="settings" element={<AccountBillingProfile />} />
         </Route>
       </Routes>
     </Router>

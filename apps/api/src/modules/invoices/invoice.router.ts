@@ -8,8 +8,9 @@ export const invoiceRouter = new Elysia({ prefix: '/invoices' })
   .use(authenticate)
   .use(resolveTenant)
   .decorate('invoiceService', new InvoiceService())
-  .get('/', async ({ tenant, query, invoiceService }) => {
-    return invoiceService.getInvoices(tenant.id, query.status as string)
+  .get('/', async ({ tenant, user, query, invoiceService }) => {
+    const userId = (user.role === 'admin' || user.role === 'owner') ? undefined : user.id;
+    return invoiceService.getInvoices(tenant.id, query.status as string, userId)
   }, { query: QueryInvoicesDto })
   .get('/:id', async ({ params: { id }, tenant, invoiceService }) => {
     return invoiceService.getInvoiceById(tenant.id, id)
@@ -35,6 +36,13 @@ export const invoiceRouter = new Elysia({ prefix: '/invoices' })
       return { code: 'FORBIDDEN', message: 'Only admins can void' }
     }
     return invoiceService.voidInvoice(tenant.id, id)
+  }, { params: t.Object({ id: t.String() }) })
+  .post('/:id/pay', async ({ params: { id }, tenant, user, set, invoiceService }) => {
+    if (user.role !== 'admin' && user.role !== 'owner') {
+      set.status = 403
+      return { code: 'FORBIDDEN', message: 'Only admins can mark paid' }
+    }
+    return invoiceService.markPaid(tenant.id, id)
   }, { params: t.Object({ id: t.String() }) })
   .get('/:id/pdf', async ({ params: { id }, tenant, invoiceService }) => {
     const url = await invoiceService.getPdfSignedUrl(tenant.id, id)

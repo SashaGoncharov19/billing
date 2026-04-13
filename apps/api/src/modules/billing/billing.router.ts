@@ -2,12 +2,12 @@ import { Elysia } from 'elysia'
 import { BillingService } from './billing.service'
 import { CheckoutDto, PortalDto } from './billing.schema'
 import { t } from 'elysia'
-import { db, products, invoices, invoiceItems, currencies, paymentMethods } from '@entityseven/db'
+import { db, products, invoices, invoiceItems, currencies, paymentMethods, users } from '@entityseven/db'
 import { eq } from 'drizzle-orm'
 import { authenticate } from '../../middleware/authenticate'
 import { resolveTenant } from '../../middleware/tenant'
 import { getPaymentProvider } from '../../providers/provider.factory'
-import { webhookQueue } from '../../queue/index'
+import { webhookQueue, pdfQueue } from '../../queue/index'
 
 export const billingRouter = new Elysia({ prefix: '/billing' })
   .use(authenticate)
@@ -28,11 +28,16 @@ export const billingRouter = new Elysia({ prefix: '/billing' })
   .get('/subscription', async ({ tenant, billingService }) => {
     return billingService.getSubscriptionForTenant(tenant.id)
   })
-  .post('/manual-checkout', async ({ body, tenant }) => {
+  .post('/manual-checkout', async ({ body, tenant, user }) => {
     const product = await db.query.products.findFirst({
        where: eq(products.id, body.productId)
     })
     if (!product) throw new Error("Product not found")
+
+    const dbUser = await db.query.users.findFirst({
+       where: eq(users.id, user.id)
+    })
+    if (!dbUser) throw new Error("User not found")
     
     let totalAmount = Number(product.price)
     let currencyStr = 'usd'
@@ -54,7 +59,22 @@ export const billingRouter = new Elysia({ prefix: '/billing' })
       currency: currencyStr.toUpperCase(),
       totalAmount: totalAmount.toFixed(2),
       subtotalAmount: totalAmount.toFixed(2),
-      taxAmount: '0.00'
+      taxAmount: '0.00',
+      createdByUserId: user.id,
+      issuerDetails: {
+        name: tenant.billingEntity || tenant.name,
+        address: tenant.billingAddress,
+        taxId: tenant.billingTaxId,
+        email: tenant.billingEmail,
+        country: tenant.billingCountry
+      },
+      recipientDetails: {
+        name: dbUser.billingName || dbUser.email,
+        address: dbUser.billingAddress,
+        taxId: dbUser.billingTaxId,
+        email: dbUser.billingEmail || dbUser.email,
+        country: dbUser.billingCountry
+      }
     }).returning()
 
     if (newInvoice) {
@@ -65,6 +85,11 @@ export const billingRouter = new Elysia({ prefix: '/billing' })
         unitPrice: totalAmount.toFixed(2),
         totalAmount: totalAmount.toFixed(2),
         quantity: 1,
+      })
+
+      await pdfQueue.add('generate-invoice', { 
+        type: 'invoice', 
+        data: { invoiceId: newInvoice.id, tenantId: tenant.id } 
       })
 
       return { invoiceId: newInvoice.id }

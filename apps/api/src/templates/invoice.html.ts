@@ -19,6 +19,16 @@ export function generateInvoiceHtml(invoice: any, tenant: any): string {
   const badgeColor = invoice.status === 'paid' ? '#D1FAE5' : invoice.status === 'open' ? '#DBEAFE' : '#FEF3C7'
   const badgeTextColor = invoice.status === 'paid' ? '#065F46' : invoice.status === 'open' ? '#1E40AF' : '#92400E'
 
+  const issuer = invoice.issuerDetails || {
+    name: tenant.billingEntity || tenant.name,
+    address: tenant.billingAddress,
+    taxId: tenant.billingTaxId,
+    email: tenant.billingEmail,
+    country: tenant.billingCountry
+  }
+
+  const recipient = invoice.recipientDetails || {}
+
   return `
 <!DOCTYPE html>
 <html lang="en">
@@ -43,6 +53,24 @@ export function generateInvoiceHtml(invoice: any, tenant: any): string {
       font-size: 24px;
       font-weight: 700;
       color: ${tenant.primaryColor ?? '#3B82F6'};
+    }
+    .addresses {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 40px;
+      background: #F9FAFB;
+      padding: 24px;
+      border-radius: 8px;
+    }
+    .address-block h3 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 14px;
+      text-transform: uppercase;
+      color: #6B7280;
+    }
+    .address-line {
+      margin-bottom: 4px;
     }
     table {
       width: 100%;
@@ -82,13 +110,33 @@ export function generateInvoiceHtml(invoice: any, tenant: any): string {
 <body>
   <div class="header">
     <div>
-      <h2>${tenant.name}</h2>
+      <h2>${issuer.name || tenant.name}</h2>
     </div>
     <div style="text-align: right">
       <div class="invoice-number">Invoice #${String(invoice.number).padStart(6, '0')}</div>
       <div style="margin-top: 8px;">Status: <span class="status-badge">${invoice.status}</span></div>
       <div style="margin-top: 8px;">Issued: ${formatDate(invoice.issuedAt)}</div>
       <div style="margin-top: 4px;">Due: ${formatDate(invoice.dueAt)}</div>
+    </div>
+  </div>
+
+  <div class="addresses">
+    <div class="address-block">
+      <h3>From</h3>
+      <div class="address-line"><strong>${issuer.name || 'Company Name'}</strong></div>
+      ${issuer.address ? `<div class="address-line" style="white-space: pre-wrap;">${issuer.address}</div>` : ''}
+      ${issuer.country ? `<div class="address-line">${issuer.country}</div>` : ''}
+      ${issuer.taxId ? `<div class="address-line">Tax ID: ${issuer.taxId}</div>` : ''}
+      ${issuer.email ? `<div class="address-line">${issuer.email}</div>` : ''}
+    </div>
+    
+    <div class="address-block" style="text-align: right;">
+      <h3>Bill To</h3>
+      <div class="address-line"><strong>${recipient.name || 'Customer'}</strong></div>
+      ${recipient.address ? `<div class="address-line" style="white-space: pre-wrap;">${recipient.address}</div>` : ''}
+      ${recipient.country ? `<div class="address-line">${recipient.country}</div>` : ''}
+      ${recipient.taxId ? `<div class="address-line">Tax ID: ${recipient.taxId}</div>` : ''}
+      ${recipient.email ? `<div class="address-line">${recipient.email}</div>` : ''}
     </div>
   </div>
 
@@ -103,7 +151,7 @@ export function generateInvoiceHtml(invoice: any, tenant: any): string {
       </tr>
     </thead>
     <tbody>
-      ${invoice.items.map((item: any) => `
+      ${invoice.items?.map((item: any) => `
         <tr>
           <td>${item.description}</td>
           <td>${item.quantity}</td>
@@ -111,7 +159,7 @@ export function generateInvoiceHtml(invoice: any, tenant: any): string {
           <td>${Number(item.taxRate) * 100}%</td>
           <td>${formatMoney(item.totalAmount, invoice.currency)}</td>
         </tr>
-      `).join('')}
+      `).join('') || ''}
     </tbody>
   </table>
 

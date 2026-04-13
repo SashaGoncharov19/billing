@@ -166,6 +166,8 @@ export const authRouter = new Elysia({ prefix: '/auth' })
     return { success: true }
   })
   .get('/me', async ({ user }) => {
+    const dbUser = await db.query.users.findFirst({ where: eq(users.id, user.id) })
+
     const userMemberships = await db.select({
       tenantId: memberships.tenantId,
       role: memberships.role,
@@ -181,9 +183,26 @@ export const authRouter = new Elysia({ prefix: '/auth' })
       theme: 'light',
       preferredLanguage: 'en',
       role: userMemberships[0]?.role, // Pick current context role, usually they have 1
-      memberships: userMemberships
+      memberships: userMemberships,
+      billingName: dbUser?.billingName,
+      billingAddress: dbUser?.billingAddress,
+      billingTaxId: dbUser?.billingTaxId,
+      billingEmail: dbUser?.billingEmail,
+      billingCountry: dbUser?.billingCountry
     }
   })
+  .patch('/me', async ({ body, user, set }) => {
+    try {
+      const [updated] = await db.update(users)
+        .set(body)
+        .where(eq(users.id, user.id))
+        .returning()
+      return updated
+    } catch (e) {
+      set.status = 500
+      return { message: 'Failed to update user' }
+    }
+  }, { body: AuthSchema.UpdateMe })
   .post('/switch-tenant', async ({ body, user, accessJwt, set }) => {
     try {
       const u = user as unknown as { id?: string; sub?: string }

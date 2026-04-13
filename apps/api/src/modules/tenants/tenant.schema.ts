@@ -9,6 +9,11 @@ export const updateTenantSchema = t.Object({
   name: t.Optional(t.String({ minLength: 2, maxLength: 255 })),
   primaryColor: t.Optional(t.String({ pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$' })),
   secondaryColor: t.Optional(t.String({ pattern: '^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$' })),
+  billingEntity: t.Optional(t.String()),
+  billingAddress: t.Optional(t.String()),
+  billingTaxId: t.Optional(t.String()),
+  billingEmail: t.Optional(t.String()),
+  billingCountry: t.Optional(t.String()),
 })
 
 export const uploadLogoSchema = t.Object({
