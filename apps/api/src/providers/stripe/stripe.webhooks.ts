@@ -1,5 +1,6 @@
-import { db, subscriptions, payments, invoices, tenants } from '@entityseven/db'
+import { db, subscriptions, payments, invoices, tenants, products } from '@entityseven/db'
 import { eq } from 'drizzle-orm'
+import { PluginManager } from '../../modules/plugins/plugin.manager'
 import type { WebhookEvent } from '../payment-provider.interface'
 import { z } from 'zod'
 
@@ -11,6 +12,7 @@ const WebhookDataSchema = z.object({
   status: z.enum(['trialing', 'active', 'past_due', 'canceled', 'unpaid', 'incomplete']).optional(),
   current_period_end: z.number().optional(),
   cancel_at_period_end: z.boolean().optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
 }).loose()
 
 export async function handleWebhookEvent(event: WebhookEvent) {
@@ -44,6 +46,7 @@ async function handleCheckoutCompleted(event: WebhookEvent) {
   const eventData = WebhookDataSchema.parse(event.data)
   const customerId = eventData.customer
   const subscriptionId = eventData.subscription
+  const productId = eventData.metadata?.productId as string | undefined
 
   if (!customerId || !subscriptionId) return
 
@@ -61,12 +64,23 @@ async function handleCheckoutCompleted(event: WebhookEvent) {
   })
 
   if (!existingSub) {
-    await db.insert(subscriptions).values({
+    const newSubs = await db.insert(subscriptions).values({
       tenantId: tenant.id,
+      productId: productId || null,
       provider: 'stripe',
       providerSubscriptionId: subscriptionId,
       status: 'active',
-    })
+    }).returning()
+    
+    const newSub = newSubs[0]
+
+    if (productId && newSub) {
+      const product = await db.query.products.findFirst({ where: eq(products.id, productId) })
+      if (product?.pluginType) {
+        console.log(`[PluginManager] Triggering provision for product ${productId} with plugin ${product.pluginType}`)
+        await PluginManager.dispatch('provision', product.pluginType, tenant.id, newSub.id, product.pluginConfig)
+      }
+    }
   }
 
   console.log(`[WEBHOOK] Processed checkout.completed for tenant ${tenant.id}`)

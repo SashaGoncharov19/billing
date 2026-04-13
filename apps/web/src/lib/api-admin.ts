@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from './api'
 import axios from 'axios'
 
@@ -37,6 +37,9 @@ export const adminKeys = {
   stats: () => [...adminKeys.all, 'stats'] as const,
   health: () => [...adminKeys.all, 'health'] as const,
   auditLogs: () => [...adminKeys.all, 'audit-logs'] as const,
+  plugins: () => [...adminKeys.all, 'plugins'] as const,
+  pluginOptions: (id: string) => [...adminKeys.all, 'plugins', id, 'options'] as const,
+  products: () => [...adminKeys.all, 'products'] as const,
 }
 
 export const useAdminStats = () => {
@@ -71,5 +74,50 @@ export const useSystemAuditLogs = () => {
       return data
     },
     refetchInterval: 60000,
+  })
+}
+
+export const useAdminPlugins = () => {
+  return useQuery({
+    queryKey: adminKeys.plugins(),
+    queryFn: async () => {
+      const { data } = await api.get<{id: string, name: string}[]>('/admin/plugins')
+      return data
+    }
+  })
+}
+
+export const useAdminPluginOptions = (pluginId?: string) => {
+  return useQuery({
+    queryKey: adminKeys.pluginOptions(pluginId || ''),
+    queryFn: async () => {
+      if (!pluginId) return []
+      const { data } = await api.get<{id: string | number, name: string}[]>(`/admin/plugins/${pluginId}/options`)
+      return data
+    },
+    enabled: !!pluginId
+  })
+}
+
+export const useAdminProducts = () => {
+  return useQuery({
+    queryKey: adminKeys.products(),
+    queryFn: async () => {
+      const { data } = await api.get<any[]>('/admin/products')
+      return data
+    }
+  })
+}
+
+export const useAdminCreateProduct = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: any) => {
+      const { data } = await api.post('/admin/products', payload)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.products() })
+    }
   })
 }

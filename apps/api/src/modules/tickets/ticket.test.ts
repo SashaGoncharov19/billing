@@ -1,5 +1,6 @@
 import { describe, expect, it, mock, beforeEach, spyOn } from 'bun:test'
-import { TicketService, emailQueue } from './ticket.service'
+import { TicketService } from './ticket.service'
+import { emailQueue } from '../../queue/index'
 
 const mockInsertReturning = mock().mockResolvedValue([{ id: 'tic_123', status: 'open', subject: 'Help object' }])
 const mockInsertValues = mock().mockReturnValue({ returning: mockInsertReturning })
@@ -11,6 +12,12 @@ const mockUpdate = mock().mockReturnValue({ set: mockUpdateSet })
 
 const mockFindMany = mock().mockResolvedValue([{ id: 'tic_123', isInternal: false }])
 const mockFindFirst = mock().mockResolvedValue({ id: 'tic_123', status: 'open', tenantId: 'tenant_1', createdByUserId: 'user_1' })
+
+mock.module('../../queue/index', () => ({
+  emailQueue: {
+    add: mock().mockResolvedValue({})
+  }
+}))
 
 mock.module('@entityseven/db', () => ({
   db: {

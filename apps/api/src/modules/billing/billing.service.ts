@@ -61,7 +61,7 @@ export class BillingService {
       successUrl,
       cancelUrl,
       mode: product.billingType === 'recurring' ? 'subscription' : 'payment',
-      metadata: { tenantId }
+      metadata: { tenantId, productId }
     })
 
     return session

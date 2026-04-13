@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Users, Building, ShieldCheck, Ticket, LogOut } from 'lucide-react'
+import { LayoutDashboard, Users, Building, ShieldCheck, Ticket, LogOut, Package } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/auth.store'
 
@@ -10,6 +10,7 @@ export default function AdminLayout() {
   const links = [
     { to: '/admin', icon: LayoutDashboard, label: 'Overview' },
     { to: '/admin/tickets', icon: Ticket, label: 'Support Queues' },
+    { to: '/admin/products', icon: Package, label: 'Products' },
     { to: '/admin/tenants', icon: Building, label: 'Tenants' },
     { to: '/admin/users', icon: Users, label: 'Users' },
     { to: '/admin/audit', icon: ShieldCheck, label: 'Audit Logs' },

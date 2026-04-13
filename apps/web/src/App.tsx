@@ -20,6 +20,7 @@ import CreateTicket from './pages/portal/tickets/CreateTicket'
 import TicketDetail from './pages/portal/tickets/TicketDetail'
 
 import AdminTickets from './pages/admin/AdminTickets'
+import AdminProducts from './pages/admin/AdminProducts'
 
 function App() {
   const [theme] = useState<'dark' | 'light' | 'system'>(() => {
@@ -60,6 +61,7 @@ function App() {
           <Route index element={<AdminDashboard />} />
           <Route path="tickets" element={<AdminTickets />} />
           <Route path="tickets/:id" element={<TicketDetail />} />
+          <Route path="products" element={<AdminProducts />} />
         </Route>
 
         <Route path="/" element={

@@ -15,6 +15,13 @@
       "when": 1776009533470,
       "tag": "0001_futuristic_loki",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776045887977,
+      "tag": "0002_chief_satana",
+      "breakpoints": true
     }
   ]
 }

@@ -1,9 +1,10 @@
 import { Elysia, t } from 'elysia'
 import { db } from '@entityseven/db'
-import { tenants, users, auditLogs, invoices, tickets, subscriptions, memberships } from '@entityseven/db'
+import { tenants, users, auditLogs, invoices, tickets, subscriptions, memberships, products } from '@entityseven/db'
 import { eq, count, sum, desc } from 'drizzle-orm'
 import { authenticate } from '../../middleware/authenticate'
 import { ForbiddenError } from '../../middleware/error-handler'
+import { PluginManager } from '../plugins/plugin.manager'
 
 export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.router' })
   .use(authenticate)
@@ -93,4 +94,32 @@ export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.ro
       page: t.Optional(t.Numeric()),
       limit: t.Optional(t.Numeric())
     }))
+  })
+  .get('/plugins', () => {
+    return PluginManager.getRegisteredPlugins()
+  })
+  .get('/plugins/:pluginId/options', async ({ params: { pluginId } }) => {
+    const plugin = PluginManager.getPlugin(pluginId)
+    if (!plugin) throw new Error('Plugin not found')
+    return await plugin.getAdminOptions()
+  })
+  .get('/products', async () => {
+    return await db.select().from(products).orderBy(desc(products.createdAt))
+  })
+  .post('/products', async ({ body }) => {
+    const payload = { ...body, price: body.price.toString() }
+    const [newProduct] = await db.insert(products).values(payload).returning()
+    return newProduct
+  }, {
+    body: t.Object({
+      tenantId: t.String(),
+      name: t.String(),
+      description: t.Optional(t.String()),
+      price: t.Numeric(),
+      currency: t.Optional(t.String()),
+      billingType: t.Optional(t.Union([t.Literal('one_time'), t.Literal('recurring')])),
+      billingInterval: t.Optional(t.Union([t.Literal('month'), t.Literal('year')])),
+      pluginType: t.Optional(t.String()),
+      pluginConfig: t.Optional(t.Any()),
+    })
   })
