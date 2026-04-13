@@ -1,12 +1,12 @@
 import { useAdminStats, useSystemHealth, useSystemAuditLogs } from '../../lib/api-admin'
 import { motion } from 'framer-motion'
-import { Server, Users, CreditCard, Ticket, Clock, CheckCircle2, AlertTriangle, XCircle, Activity } from 'lucide-react'
-import { formatDistanceToNow, format } from 'date-fns'
+import { Server, Users, CreditCard, Ticket, Clock, AlertTriangle, Activity } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 function formatUptime(seconds: number) {
-  const d = Math.floor(seconds / (3600*24));
-  const h = Math.floor(seconds % (3600*24) / 3600);
+  const d = Math.floor(seconds / (3600 * 24));
+  const h = Math.floor(seconds % (3600 * 24) / 3600);
   const m = Math.floor(seconds % 3600 / 60);
   return `${d}d ${h}h ${m}m`;
 }
@@ -36,7 +36,7 @@ export default function AdminDashboard() {
 
       {statsLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 animate-pulse">
-          {[1,2,3,4].map(i => <div key={i} className="h-32 bg-card border rounded-xl" />)}
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-card border rounded-xl" />)}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -49,7 +49,7 @@ export default function AdminDashboard() {
               ${currentRevenue.toFixed(2)}
             </div>
           </motion.div>
-          
+
           <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }} className="rounded-xl border bg-card p-6 shadow-sm flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <h3 className="tracking-tight text-sm font-medium text-muted-foreground">Active Subscriptions</h3>
@@ -94,14 +94,14 @@ export default function AdminDashboard() {
               <AreaChart data={mockChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-brand-primary)" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="var(--color-brand-primary)" stopOpacity={0}/>
+                    <stop offset="5%" stopColor="var(--color-brand-primary)" stopOpacity={0.8} />
+                    <stop offset="95%" stopColor="var(--color-brand-primary)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" opacity={0.5} />
                 <XAxis dataKey="name" stroke="var(--color-muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
                 <YAxis stroke="var(--color-muted-foreground)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`} />
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-border)', borderRadius: '8px' }}
                   itemStyle={{ color: 'var(--color-foreground)' }}
                 />
@@ -132,57 +132,57 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
-          
+
           <div className="p-6 space-y-6">
-             <div className="flex justify-between items-center bg-muted/40 p-3 rounded-lg border border-border/50">
-               <div className="flex items-center gap-2">
-                 <Clock size={16} className="text-brand-primary" />
-                 <span className="text-sm font-medium">Uptime</span>
-               </div>
-               <span className="text-sm font-mono">{health ? formatUptime(health.uptime) : '--'}</span>
-             </div>
+            <div className="flex justify-between items-center bg-muted/40 p-3 rounded-lg border border-border/50">
+              <div className="flex items-center gap-2">
+                <Clock size={16} className="text-brand-primary" />
+                <span className="text-sm font-medium">Uptime</span>
+              </div>
+              <span className="text-sm font-mono">{health ? formatUptime(health.uptime) : '--'}</span>
+            </div>
 
-             <div className="space-y-4">
-               <div>
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      <Server size={14} className="text-muted-foreground" /> PostgreSQL
-                    </span>
-                    <span className="text-xs text-muted-foreground">{health?.services.database.latency || 0}ms</span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-1.5">
-                     <div className={`h-1.5 rounded-full ${health?.services.database.status === 'ok' ? 'bg-brand-primary' : 'bg-destructive'}`} style={{ width: health ? '100%' : '0%' }}></div>
-                  </div>
-               </div>
+            <div className="space-y-4">
+              <div>
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-sm font-medium flex items-center gap-2">
+                    <Server size={14} className="text-muted-foreground" /> PostgreSQL
+                  </span>
+                  <span className="text-xs text-muted-foreground">{health?.services.database.latency || 0}ms</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-1.5">
+                  <div className={`h-1.5 rounded-full ${health?.services.database.status === 'ok' ? 'bg-brand-primary' : 'bg-destructive'}`} style={{ width: health ? '100%' : '0%' }}></div>
+                </div>
+              </div>
 
-               <div>
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      <Server size={14} className="text-muted-foreground" /> Redis Cache
-                    </span>
-                    <span className="text-xs text-muted-foreground">{health?.services.redis.latency || 0}ms</span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-1.5">
-                     <div className={`h-1.5 rounded-full ${health?.services.redis.status === 'ok' ? 'bg-brand-primary' : 'bg-destructive'}`} style={{ width: health ? '100%' : '0%' }}></div>
-                  </div>
-               </div>
+              <div>
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-sm font-medium flex items-center gap-2">
+                    <Server size={14} className="text-muted-foreground" /> Redis Cache
+                  </span>
+                  <span className="text-xs text-muted-foreground">{health?.services.redis.latency || 0}ms</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-1.5">
+                  <div className={`h-1.5 rounded-full ${health?.services.redis.status === 'ok' ? 'bg-brand-primary' : 'bg-destructive'}`} style={{ width: health ? '100%' : '0%' }}></div>
+                </div>
+              </div>
 
-               <div>
-                  <div className="flex justify-between mb-1.5">
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      <Server size={14} className="text-muted-foreground" /> Background Queue
-                    </span>
-                    <span className="text-xs text-muted-foreground">{health?.services.queue.size !== undefined ? `${health.services.queue.size} jobs` : '--'}</span>
-                  </div>
-                  <div className="w-full bg-muted rounded-full h-1.5">
-                     <div className={`h-1.5 rounded-full ${health?.services.queue.status === 'ok' ? 'bg-brand-primary' : 'bg-destructive'}`} style={{ width: health ? '100%' : '0%' }}></div>
-                  </div>
-               </div>
-             </div>
+              <div>
+                <div className="flex justify-between mb-1.5">
+                  <span className="text-sm font-medium flex items-center gap-2">
+                    <Server size={14} className="text-muted-foreground" /> Background Queue
+                  </span>
+                  <span className="text-xs text-muted-foreground">{health?.services.queue.size !== undefined ? `${health.services.queue.size} jobs` : '--'}</span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-1.5">
+                  <div className={`h-1.5 rounded-full ${health?.services.queue.status === 'ok' ? 'bg-brand-primary' : 'bg-destructive'}`} style={{ width: health ? '100%' : '0%' }}></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      
+
       {/* Audit Logs */}
       <div className="rounded-xl border bg-card shadow-sm">
         <div className="p-6 border-b border-border/50">

@@ -8,7 +8,8 @@ import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 
 import api from '../../lib/api'
-import { useAuthStore } from '../../store/auth.store'
+import { useAuthStore } from '@/store/auth.store'
+import type { AxiosError } from 'axios'
 
 const registerSchema = z.object({
   tenantName: z.string().min(2, 'Workspace name must be at least 2 characters'),
@@ -38,7 +39,7 @@ export default function Register() {
       toast.success('Account created successfully!')
       navigate('/dashboard', { replace: true })
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<{ message: string }>) => {
       const msg = error.response?.data?.message || 'Failed to create account. Email may already be in use.'
       setErrorMsg(msg)
       toast.error(msg)

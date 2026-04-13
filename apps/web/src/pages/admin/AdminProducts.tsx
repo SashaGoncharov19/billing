@@ -3,19 +3,26 @@ import {
   useAdminProducts,
   useAdminPlugins,
   useAdminPluginOptions,
-  useAdminCreateProduct
+  useAdminCreateProduct,
+  useAdminUpdateProduct,
+  useAdminDeleteProduct
 } from '@/lib/api-admin'
+import type { Product } from '@/lib/api-admin'
 import { useAuthStore } from '@/store/auth.store'
-import { Plus, Package, Plug, Loader2 } from 'lucide-react'
+import { Plus, Package, Plug, Loader2, Edit, Trash2 } from 'lucide-react'
 
 export default function AdminProducts() {
   const { data: products, isLoading: loadingProducts } = useAdminProducts()
   const { data: plugins } = useAdminPlugins()
   const createProduct = useAdminCreateProduct()
+  const updateProduct = useAdminUpdateProduct()
+  const deleteProduct = useAdminDeleteProduct()
   
   const { tenant } = useAuthStore()
 
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -26,6 +33,35 @@ export default function AdminProducts() {
     pluginConfigTemplateId: ''
   })
 
+  const handleEdit = (product: Product) => {
+    setEditingId(product.id)
+    setFormData({
+      name: product.name,
+      description: product.description || '',
+      price: product.price.toString(),
+      billingType: product.billingType,
+      billingInterval: product.billingInterval || 'month',
+      pluginType: product.pluginType || '',
+      pluginConfigTemplateId: product.pluginConfig?.hostingPlanId || ''
+    })
+    setIsModalOpen(true)
+  }
+
+  const handleDelete = async (productId: string) => {
+    if (!tenant) return
+    if (confirm('Are you sure you want to delete this product? All existing subscriptions will remain, but new users won\'t be able to buy it.')) {
+      await deleteProduct.mutateAsync({ id: productId, tenantId: tenant.id })
+    }
+  }
+
+  const openNewModal = () => {
+    setEditingId(null)
+    setFormData({
+      name: '', description: '', price: '', billingType: 'one_time', billingInterval: 'month', pluginType: '', pluginConfigTemplateId: ''
+    })
+    setIsModalOpen(true)
+  }
+
   const { data: pluginOptions, isLoading: loadingOptions } = useAdminPluginOptions(
     formData.pluginType !== '' ? formData.pluginType : undefined
   )
@@ -35,17 +71,10 @@ export default function AdminProducts() {
     
     if (!tenant) return
 
-    const payload: any = {
+    const payload: Record<string, unknown> = {
       tenantId: tenant.id,
       name: formData.name,
       description: formData.description,
-      price: parseFloat(formData.price),
-      currency: 'usd',
-      billingType: formData.billingType,
-    }
-
-    if (formData.billingType === 'recurring') {
-      payload.billingInterval = formData.billingInterval
     }
 
     if (formData.pluginType) {
@@ -55,8 +84,20 @@ export default function AdminProducts() {
       }
     }
 
-    await createProduct.mutateAsync(payload)
+    if (editingId) {
+      await updateProduct.mutateAsync({ id: editingId, tenantId: tenant.id, payload })
+    } else {
+      payload.price = parseFloat(formData.price)
+      payload.currency = 'usd'
+      payload.billingType = formData.billingType
+      if (formData.billingType === 'recurring') {
+        payload.billingInterval = formData.billingInterval
+      }
+      await createProduct.mutateAsync(payload)
+    }
+
     setIsModalOpen(false)
+    setEditingId(null)
     setFormData({
       name: '', description: '', price: '', billingType: 'one_time', billingInterval: 'month', pluginType: '', pluginConfigTemplateId: ''
     })
@@ -70,7 +111,7 @@ export default function AdminProducts() {
           <p className="text-muted-foreground">Manage billing products and integrations</p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={openNewModal}
           className="bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium hover:bg-primary/90 flex items-center gap-2"
         >
           <Plus size={18} />
@@ -94,7 +135,7 @@ export default function AdminProducts() {
                 <th className="px-6 py-4 font-medium">Price</th>
                 <th className="px-6 py-4 font-medium">Type</th>
                 <th className="px-6 py-4 font-medium">Plugin</th>
-                <th className="px-6 py-4 font-medium">Created</th>
+                <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -119,8 +160,13 @@ export default function AdminProducts() {
                       <span className="text-muted-foreground">-</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-muted-foreground whitespace-nowrap">
-                    {new Date(p.createdAt).toLocaleDateString()}
+                  <td className="px-6 py-4 text-right whitespace-nowrap">
+                    <button onClick={() => handleEdit(p)} className="p-2 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors mr-2">
+                       <Edit size={16} />
+                    </button>
+                    <button onClick={() => handleDelete(p.id)} className="p-2 hover:bg-red-500/20 text-red-500 rounded-md transition-colors">
+                       <Trash2 size={16} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -133,7 +179,7 @@ export default function AdminProducts() {
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-card w-full max-w-lg rounded-xl border shadow-xl flex flex-col max-h-[90vh]">
             <div className="p-6 border-b flex justify-between items-center shrink-0">
-              <h2 className="text-lg font-semibold">Create New Product</h2>
+              <h2 className="text-lg font-semibold">{editingId ? 'Edit Product' : 'Create New Product'}</h2>
               <button 
                 onClick={() => setIsModalOpen(false)}
                 className="text-muted-foreground hover:text-foreground"
@@ -170,11 +216,12 @@ export default function AdminProducts() {
                     <label className="text-sm font-medium">Price (USD)</label>
                     <input
                       required
+                      disabled={!!editingId} // Disable if editing
                       type="number"
                       step="0.01"
                       value={formData.price}
                       onChange={(e) => setFormData(p => ({ ...p, price: e.target.value }))}
-                      className="w-full p-2 rounded-md border bg-background"
+                      className="w-full p-2 rounded-md border bg-background disabled:opacity-50"
                       placeholder="0.00"
                     />
                   </div>
@@ -182,9 +229,10 @@ export default function AdminProducts() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Billing Type</label>
                     <select
+                      disabled={!!editingId} // Disable if editing
                       value={formData.billingType}
                       onChange={(e) => setFormData(p => ({ ...p, billingType: e.target.value }))}
-                      className="w-full p-2 rounded-md border bg-background"
+                      className="w-full p-2 rounded-md border bg-background disabled:opacity-50"
                     >
                       <option value="one_time">One Time</option>
                       <option value="recurring">Recurring</option>
@@ -196,9 +244,10 @@ export default function AdminProducts() {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Billing Interval</label>
                     <select
+                      disabled={!!editingId} // Disable if editing
                       value={formData.billingInterval}
                       onChange={(e) => setFormData(p => ({ ...p, billingInterval: e.target.value }))}
-                      className="w-full p-2 rounded-md border bg-background"
+                      className="w-full p-2 rounded-md border bg-background disabled:opacity-50"
                     >
                       <option value="month">Monthly</option>
                       <option value="year">Yearly</option>
@@ -235,7 +284,7 @@ export default function AdminProducts() {
                         className="w-full p-2 rounded-md border bg-background disabled:opacity-50"
                       >
                         <option value="">-- Select Template --</option>
-                        {pluginOptions?.map((opt: any) => (
+                        {pluginOptions?.map((opt: { id: string | number; name: string }) => (
                           <option key={opt.id} value={opt.id}>{opt.name}</option>
                         ))}
                       </select>
@@ -258,10 +307,10 @@ export default function AdminProducts() {
               <button 
                 type="submit" 
                 form="product-form"
-                disabled={createProduct.isPending}
+                disabled={createProduct.isPending || updateProduct.isPending}
                 className="bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 flex items-center"
               >
-                {createProduct.isPending ? <><Loader2 size={16} className="animate-spin mr-2" /> Creating...</> : 'Save Product'}
+                {(createProduct.isPending || updateProduct.isPending) ? <><Loader2 size={16} className="animate-spin mr-2" /> Saving...</> : 'Save Product'}
               </button>
             </div>
           </div>

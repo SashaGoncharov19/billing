@@ -1,8 +1,8 @@
 import { Worker } from 'bullmq'
 import { bullMqConnection } from '../client'
 import { schedulerQueue } from '../index'
-import { db, tickets, idempotencyKeys } from '@entityseven/db'
-import { and, eq, lte } from 'drizzle-orm'
+import { db, tickets, idempotencyKeys, currencies } from '@entityseven/db'
+import { and, eq, lte, ne } from 'drizzle-orm'
 
 // Register cron jobs once
 export async function initScheduler() {
@@ -21,6 +21,15 @@ export async function initScheduler() {
     {
       repeat: { pattern: '0 3 * * *' }, // Daily at 03:00
       jobId: 'cleanup-idempotency-keys',
+    }
+  )
+
+  await schedulerQueue.add(
+    'update-exchange-rates',
+    {},
+    {
+      repeat: { pattern: '0 * * * *' }, // Hourly
+      jobId: 'update-exchange-rates',
     }
   )
 }
@@ -56,6 +65,39 @@ async function cleanupIdempotencyKeys() {
   }
 }
 
+async function updateExchangeRates() {
+  console.log(`[SCHEDULER] Fetching live exchange rates...`)
+  try {
+    const baseCurrency = await db.query.currencies.findFirst({
+      where: eq(currencies.isBaseCurrency, true)
+    })
+
+    const baseCode = baseCurrency ? baseCurrency.code : 'USD'
+    
+    // Using open endpoint for exchange rates
+    const response = await fetch(`https://open.er-api.com/v6/latest/${baseCode}`)
+    if (!response.ok) throw new Error(`API returned ${response.status}`)
+    const data = await response.json()
+
+    if (data && data.rates) {
+      const allCurrencies = await db.query.currencies.findMany({
+        where: ne(currencies.code, baseCode)
+      })
+
+      for (const curr of allCurrencies) {
+        if (data.rates[curr.code]) {
+          await db.update(currencies)
+            .set({ exchangeRate: data.rates[curr.code].toString(), updatedAt: new Date() })
+            .where(eq(currencies.id, curr.id))
+        }
+      }
+      console.log(`[SCHEDULER] Updated rates for ${allCurrencies.length} currencies.`)
+    }
+  } catch (error) {
+    console.error(`[SCHEDULER] Failed to update exchange rates:`, error)
+  }
+}
+
 const schedulerWorker = new Worker('scheduler', async (job) => {
   switch (job.name) {
     case 'auto-close-tickets':
@@ -65,6 +107,9 @@ const schedulerWorker = new Worker('scheduler', async (job) => {
     case 'cleanup-idempotency-keys':
       console.log(`[SCHEDULER] Running idempotency keys cleanup...`)
       await cleanupIdempotencyKeys()
+      break
+    case 'update-exchange-rates':
+      await updateExchangeRates()
       break
     default:
       console.error(`Unknown scheduler job: ${job.name}`)

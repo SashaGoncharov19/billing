@@ -5,6 +5,9 @@ import { eq, count, sum, desc } from 'drizzle-orm'
 import { authenticate } from '../../middleware/authenticate'
 import { ForbiddenError } from '../../middleware/error-handler'
 import { PluginManager } from '../plugins/plugin.manager'
+import { ProductsService } from '../products/products.service'
+import { currencyRouter } from './currency.router'
+import { paymentMethodsRouter } from './payment-methods.router'
 
 export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.router' })
   .use(authenticate)
@@ -107,9 +110,22 @@ export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.ro
     return await db.select().from(products).orderBy(desc(products.createdAt))
   })
   .post('/products', async ({ body }) => {
-    const payload = { ...body, price: body.price.toString() }
-    const [newProduct] = await db.insert(products).values(payload).returning()
-    return newProduct
+    const productsService = new ProductsService()
+    
+    // Explicit type mapping to avoid ANY
+    const payload: Parameters<typeof productsService.createProduct>[1] = {
+      name: body.name,
+      price: body.price.toString(),
+      billingType: body.billingType || 'one_time'
+    }
+
+    if (body.description !== undefined) payload.description = body.description
+    if (body.currency !== undefined) payload.currency = body.currency
+    if (body.pluginType !== undefined) payload.pluginType = body.pluginType
+    if (body.pluginConfig !== undefined) payload.pluginConfig = body.pluginConfig
+    if (body.billingInterval !== undefined) payload.billingInterval = body.billingInterval
+
+    return await productsService.createProduct(body.tenantId, payload)
   }, {
     body: t.Object({
       tenantId: t.String(),
@@ -120,6 +136,36 @@ export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.ro
       billingType: t.Optional(t.Union([t.Literal('one_time'), t.Literal('recurring')])),
       billingInterval: t.Optional(t.Union([t.Literal('month'), t.Literal('year')])),
       pluginType: t.Optional(t.String()),
-      pluginConfig: t.Optional(t.Any()),
+      pluginConfig: t.Optional(t.Unknown()),
     })
   })
+  .patch('/products/:id', async ({ params: { id }, body }) => {
+    const productsService = new ProductsService()
+    return await productsService.updateProduct(body.tenantId, id, body)
+  }, {
+    params: t.Object({
+      id: t.String(),
+    }),
+    body: t.Object({
+      tenantId: t.String(),
+      name: t.Optional(t.String()),
+      description: t.Optional(t.String()),
+      pluginType: t.Optional(t.String()),
+      pluginConfig: t.Optional(t.Unknown()),
+      isActive: t.Optional(t.Boolean()),
+    })
+  })
+  .delete('/products/:id', async ({ params: { id }, query }) => {
+    const productsService = new ProductsService()
+    if (!query.tenantId) throw new Error("tenantId is required")
+    return await productsService.deleteProduct(query.tenantId, id)
+  }, {
+    params: t.Object({
+      id: t.String(),
+    }),
+    query: t.Object({
+      tenantId: t.String()
+    })
+  })
+  .use(currencyRouter)
+  .use(paymentMethodsRouter);

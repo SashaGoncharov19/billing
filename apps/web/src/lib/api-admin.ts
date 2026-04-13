@@ -27,8 +27,40 @@ export interface AuditLog {
   tenantId?: string
   userId?: string
   action: string
-  metadata: any
+  metadata: Record<string, unknown>
   createdAt: string
+}
+
+export interface Product {
+  id: string
+  name: string
+  description?: string
+  price: string | number
+  currency: string
+  billingType: string
+  billingInterval?: string
+  pluginType?: string
+  pluginConfig?: { hostingPlanId?: string }
+  createdAt: string
+  updatedAt: string
+}
+
+export interface Currency {
+  id: string
+  code: string
+  symbol: string
+  exchangeRate: string | number
+  isBaseCurrency: boolean
+  isActive: boolean
+}
+
+export interface PaymentMethod {
+  id: string
+  name: string
+  identifier: string
+  type: string
+  instructions?: string
+  isActive: boolean
 }
 
 // Hooks
@@ -40,6 +72,8 @@ export const adminKeys = {
   plugins: () => [...adminKeys.all, 'plugins'] as const,
   pluginOptions: (id: string) => [...adminKeys.all, 'plugins', id, 'options'] as const,
   products: () => [...adminKeys.all, 'products'] as const,
+  currencies: () => [...adminKeys.all, 'currencies'] as const,
+  paymentMethods: () => [...adminKeys.all, 'paymentMethods'] as const,
 }
 
 export const useAdminStats = () => {
@@ -103,7 +137,7 @@ export const useAdminProducts = () => {
   return useQuery({
     queryKey: adminKeys.products(),
     queryFn: async () => {
-      const { data } = await api.get<any[]>('/admin/products')
+      const { data } = await api.get<Product[]>('/admin/products')
       return data
     }
   })
@@ -112,12 +146,128 @@ export const useAdminProducts = () => {
 export const useAdminCreateProduct = () => {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: Record<string, unknown>) => {
       const { data } = await api.post('/admin/products', payload)
       return data
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminKeys.products() })
     }
+  })
+}
+
+export const useAdminUpdateProduct = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, tenantId, payload }: { id: string, tenantId: string, payload: Record<string, unknown> }) => {
+      const { data } = await api.patch(`/admin/products/${id}`, { ...payload, tenantId })
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.products() })
+    }
+  })
+}
+
+export const useAdminDeleteProduct = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, tenantId }: { id: string, tenantId: string }) => {
+      const { data } = await api.delete(`/admin/products/${id}?tenantId=${tenantId}`)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: adminKeys.products() })
+    }
+  })
+}
+
+// --- Currencies ---
+
+export const useAdminCurrencies = () => {
+  return useQuery({
+    queryKey: adminKeys.currencies(),
+    queryFn: async () => {
+      const { data } = await api.get<Currency[]>('/admin/currencies')
+      return data
+    }
+  })
+}
+
+export const useAdminCreateCurrency = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const { data } = await api.post('/admin/currencies', payload)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.currencies() })
+  })
+}
+
+export const useAdminUpdateCurrency = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, payload }: { id: string, payload: Record<string, unknown> }) => {
+      const { data } = await api.patch(`/admin/currencies/${id}`, payload)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.currencies() })
+  })
+}
+
+export const useAdminDeleteCurrency = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.delete(`/admin/currencies/${id}`)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.currencies() })
+  })
+}
+
+// --- Payment Methods ---
+
+export const useAdminPaymentMethods = () => {
+  return useQuery({
+    queryKey: adminKeys.paymentMethods(),
+    queryFn: async () => {
+      const { data } = await api.get<PaymentMethod[]>('/admin/payment-methods')
+      return data
+    }
+  })
+}
+
+export const useAdminCreatePaymentMethod = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: Record<string, unknown>) => {
+      const { data } = await api.post('/admin/payment-methods', payload)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.paymentMethods() })
+  })
+}
+
+export const useAdminUpdatePaymentMethod = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, payload }: { id: string, payload: Record<string, unknown> }) => {
+      const { data } = await api.patch(`/admin/payment-methods/${id}`, payload)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.paymentMethods() })
+  })
+}
+
+export const useAdminDeletePaymentMethod = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await api.delete(`/admin/payment-methods/${id}`)
+      return data
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.paymentMethods() })
   })
 }

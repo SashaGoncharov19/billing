@@ -2,7 +2,7 @@ import { Outlet, useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/auth.store'
 import api from '../lib/api'
 import { toast } from 'sonner'
-import { LogOut, LayoutDashboard, ReceiptText, Ticket, Settings, Briefcase, ShieldCheck } from 'lucide-react'
+import { LogOut, LayoutDashboard, ReceiptText, Ticket, Settings, Briefcase, ShieldCheck, ShoppingBag } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 export default function PortalLayout() {
@@ -23,6 +23,7 @@ export default function PortalLayout() {
 
   const navLinks = [
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={18} /> },
+    { name: 'Store', path: '/shop', icon: <ShoppingBag size={18} /> },
     { name: 'Invoices', path: '/invoices', icon: <ReceiptText size={18} /> },
     { name: 'Tickets', path: '/tickets', icon: <Ticket size={18} /> },
     { name: 'Settings', path: '/settings', icon: <Settings size={18} /> },

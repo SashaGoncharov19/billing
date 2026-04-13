@@ -15,6 +15,7 @@ import { productsRouter } from './modules/products/products.router'
 import { invoiceRouter } from './modules/invoices/invoice.router'
 import { ticketRouter } from './modules/tickets/ticket.router'
 import { adminRouter } from './modules/admin/admin.router'
+import { storeRouter } from './modules/store/store.router'
 import { bullBoard } from './queue/bull-board'
 import { getMetrics } from './lib/metrics'
 import { logger } from './lib/logger'
@@ -66,6 +67,7 @@ export const app = new Elysia()
       .use(productsRouter)
       .use(invoiceRouter)
       .use(ticketRouter)
+      .use(storeRouter)
   })
 
   .use(adminRouter);

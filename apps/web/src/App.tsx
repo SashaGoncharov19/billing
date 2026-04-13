@@ -19,8 +19,15 @@ import TicketsList from './pages/portal/tickets/TicketsList'
 import CreateTicket from './pages/portal/tickets/CreateTicket'
 import TicketDetail from './pages/portal/tickets/TicketDetail'
 
+// Shop Pages
+import ShopList from './pages/portal/shop/ShopList'
+import ProductDetail from './pages/portal/shop/ProductDetail'
+import Checkout from './pages/portal/shop/Checkout'
+
 import AdminTickets from './pages/admin/AdminTickets'
 import AdminProducts from './pages/admin/AdminProducts'
+import AdminCurrencies from './pages/admin/AdminCurrencies'
+import AdminPaymentMethods from './pages/admin/AdminPaymentMethods'
 
 function App() {
   const [theme] = useState<'dark' | 'light' | 'system'>(() => {
@@ -62,6 +69,8 @@ function App() {
           <Route path="tickets" element={<AdminTickets />} />
           <Route path="tickets/:id" element={<TicketDetail />} />
           <Route path="products" element={<AdminProducts />} />
+          <Route path="currencies" element={<AdminCurrencies />} />
+          <Route path="payment-methods" element={<AdminPaymentMethods />} />
         </Route>
 
         <Route path="/" element={
@@ -76,6 +85,10 @@ function App() {
           <Route path="tickets" element={<TicketsList />} />
           <Route path="tickets/new" element={<CreateTicket />} />
           <Route path="tickets/:id" element={<TicketDetail />} />
+          
+          <Route path="shop" element={<ShopList />} />
+          <Route path="shop/:id" element={<ProductDetail />} />
+          <Route path="shop/checkout/:id" element={<Checkout />} />
           
           <Route path="settings" element={<div className="p-4 bg-card rounded-xl border">Settings coming soon</div>} />
         </Route>

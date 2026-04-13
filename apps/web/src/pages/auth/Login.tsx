@@ -8,7 +8,8 @@ import { toast } from 'sonner'
 import { motion } from 'framer-motion'
 
 import api from '../../lib/api'
-import { useAuthStore } from '../../store/auth.store'
+import { useAuthStore } from '@/store/auth.store'
+import type { AxiosError } from 'axios'
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -45,7 +46,7 @@ export default function Login() {
       
       navigate(targetPath, { replace: true })
     },
-    onError: (error: any) => {
+    onError: (error: AxiosError<{ message: string }>) => {
       const msg = error.response?.data?.message || 'Failed to login. Please check your credentials.'
       setErrorMsg(msg)
       toast.error(msg)

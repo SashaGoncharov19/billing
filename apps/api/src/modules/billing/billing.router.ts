@@ -1,6 +1,9 @@
 import { Elysia } from 'elysia'
 import { BillingService } from './billing.service'
 import { CheckoutDto, PortalDto } from './billing.schema'
+import { t } from 'elysia'
+import { db, products, invoices, invoiceItems, currencies, paymentMethods } from '@entityseven/db'
+import { eq } from 'drizzle-orm'
 import { authenticate } from '../../middleware/authenticate'
 import { resolveTenant } from '../../middleware/tenant'
 import { getPaymentProvider } from '../../providers/provider.factory'
@@ -24,6 +27,55 @@ export const billingRouter = new Elysia({ prefix: '/billing' })
   }, { body: PortalDto })
   .get('/subscription', async ({ tenant, billingService }) => {
     return billingService.getSubscriptionForTenant(tenant.id)
+  })
+  .post('/manual-checkout', async ({ body, tenant }) => {
+    const product = await db.query.products.findFirst({
+       where: eq(products.id, body.productId)
+    })
+    if (!product) throw new Error("Product not found")
+    
+    let totalAmount = Number(product.price)
+    let currencyStr = 'usd'
+    let rate = '1.0'
+
+    if (body.currencyId) {
+      const curr = await db.query.currencies.findFirst({ where: eq(currencies.id, body.currencyId) })
+      if (curr) {
+        currencyStr = curr.code
+        rate = curr.exchangeRate
+        totalAmount = totalAmount * Number(rate)
+      }
+    }
+
+    const [newInvoice] = await db.insert(invoices).values({
+      tenantId: tenant.id,
+      number: Number(Date.now().toString().slice(-8)),
+      status: 'open',
+      currency: currencyStr.toUpperCase(),
+      totalAmount: totalAmount.toFixed(2),
+      subtotalAmount: totalAmount.toFixed(2),
+      taxAmount: '0.00'
+    }).returning()
+
+    if (newInvoice) {
+      await db.insert(invoiceItems).values({
+        invoiceId: newInvoice.id,
+        productId: product.id,
+        description: product.name,
+        unitPrice: totalAmount.toFixed(2),
+        totalAmount: totalAmount.toFixed(2),
+        quantity: 1,
+      })
+
+      return { invoiceId: newInvoice.id }
+    }
+    throw new Error('Failed to create invoice')
+  }, {
+    body: t.Object({
+      productId: t.String(),
+      paymentMethodId: t.String(),
+      currencyId: t.Optional(t.String())
+    })
   })
 
 export const webhookRouter = new Elysia({ prefix: '/api/v1/webhooks' })
