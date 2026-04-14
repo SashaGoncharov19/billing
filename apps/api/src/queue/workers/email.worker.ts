@@ -1,7 +1,7 @@
 import { Worker } from 'bullmq'
 import { bullMqConnection } from '../client'
 import type { EmailJob } from '../types'
-import { sendEmail } from '../../lib/email'
+import { sendEmail } from '@api/lib/email'
 
 const emailWorker = new Worker<EmailJob>(
   'emails',
@@ -11,7 +11,10 @@ const emailWorker = new Worker<EmailJob>(
 
     switch (type) {
       case 'send-email': {
-        const data = (payload.data || payload) as unknown as Extract<EmailJob, { type: 'send-email' }>['data']
+        const data = (payload.data || payload) as unknown as Extract<
+          EmailJob,
+          { type: 'send-email' }
+        >['data']
         await sendEmail({
           to: data.to,
           subject: data.subject,
@@ -20,7 +23,10 @@ const emailWorker = new Worker<EmailJob>(
         break
       }
       case 'send-invoice-notification': {
-        const data = (payload.data || payload) as unknown as Extract<EmailJob, { type: 'send-invoice-notification' }>['data']
+        const data = (payload.data || payload) as unknown as Extract<
+          EmailJob,
+          { type: 'send-invoice-notification' }
+        >['data']
         await sendEmail({
           to: data.recipientEmail,
           subject: `Invoice #${data.invoiceNumber}`,
@@ -29,7 +35,10 @@ const emailWorker = new Worker<EmailJob>(
         break
       }
       case 'send-ticket-notification': {
-        const data = (payload.data || payload) as unknown as Extract<EmailJob, { type: 'send-ticket-notification' }>['data']
+        const data = (payload.data || payload) as unknown as Extract<
+          EmailJob,
+          { type: 'send-ticket-notification' }
+        >['data']
         await sendEmail({
           to: data.recipientEmails,
           subject: `Ticket Update: ${data.ticketSubject}`,
@@ -38,7 +47,10 @@ const emailWorker = new Worker<EmailJob>(
         break
       }
       case 'send-payment-receipt': {
-        const data = (payload.data || payload) as unknown as Extract<EmailJob, { type: 'send-payment-receipt' }>['data']
+        const data = (payload.data || payload) as unknown as Extract<
+          EmailJob,
+          { type: 'send-payment-receipt' }
+        >['data']
         await sendEmail({
           to: data.recipientEmail,
           subject: `Payment Receipt: Invoice #${data.invoiceNumber}`,
@@ -53,7 +65,7 @@ const emailWorker = new Worker<EmailJob>(
   {
     connection: bullMqConnection,
     concurrency: 5,
-  }
+  },
 )
 
 emailWorker.on('failed', (job, error) => {

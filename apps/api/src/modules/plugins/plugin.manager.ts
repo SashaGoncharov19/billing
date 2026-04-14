@@ -17,12 +17,18 @@ class PluginManagerClass {
 
   getRegisteredPlugins(): { id: string; name: string }[] {
     return [
-      { id: 'keyhelp', name: 'KeyHelp' }
+      { id: 'keyhelp', name: 'KeyHelp' },
       // In the future this can be dynamically generated or read from this.registry keys
-    ];
+    ]
   }
 
-  async dispatch(event: EventType, pluginType: string, tenantId: string, subscriptionId: string, config?: any) {
+  async dispatch(
+    event: EventType,
+    pluginType: string,
+    tenantId: string,
+    subscriptionId: string,
+    config?: any,
+  ) {
     const plugin = this.getPlugin(pluginType)
     if (!plugin) {
       console.warn(`[PluginManager] No plugin registered for type: ${pluginType}`)

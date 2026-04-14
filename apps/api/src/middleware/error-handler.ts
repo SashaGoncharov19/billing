@@ -7,7 +7,7 @@ export class AppError extends Error {
     public code: string,
     message: string,
     public statusCode: number = 400,
-    public details?: unknown
+    public details?: unknown,
   ) {
     super(message)
     this.name = 'AppError'
@@ -44,11 +44,12 @@ export class InvalidTransitionError extends AppError {
   }
 }
 
-export const errorHandler = new Elysia({ name: 'error-handler' })
-  .onError({ as: 'global' }, (context) => {
+export const errorHandler = new Elysia({ name: 'error-handler' }).onError(
+  { as: 'global' },
+  (context) => {
     const { error, set } = context
     const requestId = 'requestId' in context ? String(context.requestId) : undefined
-    
+
     if (error instanceof AppError) {
       set.status = error.statusCode
       return {
@@ -73,11 +74,12 @@ export const errorHandler = new Elysia({ name: 'error-handler' })
 
     captureException(err, { requestId })
     logger.error({ requestId, error: err.message, stack: err.stack }, 'Unhandled API Error')
-    
+
     set.status = 500
     return {
       code: 'INTERNAL_ERROR',
       message: 'An unexpected error occurred',
       requestId,
     }
-  })
+  },
+)

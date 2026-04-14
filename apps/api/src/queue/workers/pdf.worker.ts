@@ -4,21 +4,21 @@ import type { PdfJob } from '../types'
 import { db } from '@entityseven/db'
 import { invoices, tenants } from '@entityseven/db'
 import { and, eq } from 'drizzle-orm'
-import { generateInvoiceHtml, type InvoiceViewData } from '../../templates/invoice.html'
-import { generatePdf, uploadInvoicePdf, deleteInvoicePdf } from '../../modules/invoices/invoice.pdf'
+import { generateInvoiceHtml, type InvoiceViewData } from '@api/templates/invoice.html'
+import { generatePdf, uploadInvoicePdf, deleteInvoicePdf } from '@api/modules/invoices/invoice.pdf'
 
-async function handleInvoicePdfGeneration(data: { invoiceId: string, tenantId: string }) {
+async function handleInvoicePdfGeneration(data: { invoiceId: string; tenantId: string }) {
   const { invoiceId, tenantId } = data
 
   const invoice = await db.query.invoices.findFirst({
     where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)),
-    with: { items: true }
+    with: { items: true },
   })
 
   if (!invoice) throw new Error(`Invoice ${invoiceId} not found`)
 
   const tenant = await db.query.tenants.findFirst({
-    where: eq(tenants.id, tenantId)
+    where: eq(tenants.id, tenantId),
   })
 
   if (!tenant) throw new Error(`Tenant ${tenantId} not found`)
@@ -28,9 +28,7 @@ async function handleInvoicePdfGeneration(data: { invoiceId: string, tenantId: s
   await deleteInvoicePdf(tenantId, invoiceId) // Clean up the old one from S3 before overwriting
   const key = await uploadInvoicePdf(tenantId, invoiceId, pdfBuffer)
 
-  await db.update(invoices)
-    .set({ pdfUrl: key })
-    .where(eq(invoices.id, invoiceId))
+  await db.update(invoices).set({ pdfUrl: key }).where(eq(invoices.id, invoiceId))
 
   console.log(`[PDF WORKER] Generated PDF for invoice ${invoiceId} at ${key}`)
 }
@@ -54,7 +52,7 @@ if (process.env.NODE_ENV !== 'test') {
     {
       connection: bullMqConnection,
       concurrency: 2,
-    }
+    },
   )
 
   pdfWorker.on('failed', (job, error) => {

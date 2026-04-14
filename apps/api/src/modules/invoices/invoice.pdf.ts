@@ -30,14 +30,13 @@ export async function generatePdf(html: string): Promise<Buffer> {
   }
 }
 
-export async function uploadInvoicePdf(tenantId: string, invoiceId: string, pdfBuffer: Buffer): Promise<string> {
+export async function uploadInvoicePdf(
+  tenantId: string,
+  invoiceId: string,
+  pdfBuffer: Buffer,
+): Promise<string> {
   const key = `invoices/${tenantId}/${invoiceId}.pdf`
-  
-  // Note: Bun S3 write doesn't natively expose an S3Client that writes directly 
-  // with write() if it's the web standard S3Client, but the `s3.write(key, data)` works in Bun 1.2+
-  // and natively handles multipart uploads.
   try {
-    // In Bun, passing the buffer into write works directly.
     await s3.write(key, pdfBuffer, {
       type: 'application/pdf',
     })
@@ -61,7 +60,6 @@ export async function deleteInvoicePdf(tenantId: string, invoiceId: string): Pro
 }
 
 export function getInvoiceSignedUrl(key: string, expiresIn = 3600): string {
-  // Bun.S3 presign natively
   const url = s3.presign(key, { expiresIn })
   return url.toString()
 }

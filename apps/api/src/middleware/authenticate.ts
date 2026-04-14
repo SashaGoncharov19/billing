@@ -12,7 +12,7 @@ export const authenticate = new Elysia({ name: 'authenticate' })
 
     const token = authHeader.slice(7)
     const payload = await accessJwt.verify(token)
-    
+
     if (!payload || !payload.sub) {
       return status(401, { code: 'TOKEN_EXPIRED', message: 'Access token expired or invalid' })
     }
@@ -28,6 +28,6 @@ export const authenticate = new Elysia({ name: 'authenticate' })
         email: payload.email as string,
         tenantId: payload.tenantId as string | undefined,
         role: payload.role as string | undefined,
-      }
+      },
     }
   })

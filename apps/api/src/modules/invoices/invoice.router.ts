@@ -1,57 +1,89 @@
 import { Elysia, t } from 'elysia'
 import { InvoiceService } from './invoice.service'
 import { CreateInvoiceDto, QueryInvoicesDto } from './invoice.schema'
-import { authenticate } from '../../middleware/authenticate'
-import { resolveTenant } from '../../middleware/tenant'
+import { authenticate } from '@api/middleware/authenticate'
+import { resolveTenant } from '@api/middleware/tenant'
 
 export const invoiceRouter = new Elysia({ prefix: '/invoices' })
   .use(authenticate)
   .use(resolveTenant)
   .decorate('invoiceService', new InvoiceService())
-  .get('/', async ({ tenant, user, query, invoiceService }) => {
-    const userId = (user.role === 'admin' || user.role === 'owner') ? undefined : user.id;
-    return invoiceService.getInvoices(tenant.id, query.status as string, userId)
-  }, { query: QueryInvoicesDto })
-  .get('/:id', async ({ params: { id }, tenant, invoiceService }) => {
-    return invoiceService.getInvoiceById(tenant.id, id)
-  }, { params: t.Object({ id: t.String() }) })
-  .post('/', async ({ body, user, tenant, set, invoiceService }) => {
-    // Requires admin or owner role effectively
-    if (user.role !== 'admin' && user.role !== 'owner') {
-      set.status = 403
-      return { code: 'FORBIDDEN', message: 'Insufficient bounds' }
-    }
-    return invoiceService.createInvoice(tenant.id, user.id, body)
-  }, { body: CreateInvoiceDto })
-  .post('/:id/issue', async ({ params: { id }, tenant, user, set, invoiceService }) => {
-    if (user.role !== 'admin' && user.role !== 'owner') {
-      set.status = 403
-      return { code: 'FORBIDDEN', message: 'Permission denied' }
-    }
-    return invoiceService.issueInvoice(tenant.id, id)
-  }, { params: t.Object({ id: t.String() }) })
-  .post('/:id/void', async ({ params: { id }, tenant, user, set, invoiceService }) => {
-    if (user.role !== 'admin') {
-      set.status = 403
-      return { code: 'FORBIDDEN', message: 'Only admins can void' }
-    }
-    return invoiceService.voidInvoice(tenant.id, id)
-  }, { params: t.Object({ id: t.String() }) })
-  .post('/:id/pay', async ({ params: { id }, tenant, user, set, invoiceService }) => {
-    if (user.role !== 'admin' && user.role !== 'owner') {
-      set.status = 403
-      return { code: 'FORBIDDEN', message: 'Only admins can mark paid' }
-    }
-    return invoiceService.markPaid(tenant.id, id)
-  }, { params: t.Object({ id: t.String() }) })
-  .get('/:id/pdf', async ({ params: { id }, tenant, invoiceService }) => {
-    const url = await invoiceService.getPdfSignedUrl(tenant.id, id)
-    return { url }
-  }, { params: t.Object({ id: t.String() }) })
-  .post('/:id/generate-pdf', async ({ params: { id }, tenant, user, set, invoiceService }) => {
-    if (user.role !== 'admin' && user.role !== 'owner') {
-      set.status = 403
-      return { code: 'FORBIDDEN', message: 'Permission denied' }
-    }
-    return invoiceService.queuePdfGeneration(tenant.id, id)
-  }, { params: t.Object({ id: t.String() }) })
+  .get(
+    '/',
+    async ({ tenant, user, query, invoiceService }) => {
+      const userId = user.role === 'admin' || user.role === 'owner' ? undefined : user.id
+      return invoiceService.getInvoices(tenant.id, query.status as string, userId)
+    },
+    { query: QueryInvoicesDto },
+  )
+  .get(
+    '/:id',
+    async ({ params: { id }, tenant, invoiceService }) => {
+      return invoiceService.getInvoiceById(tenant.id, id)
+    },
+    { params: t.Object({ id: t.String() }) },
+  )
+  .post(
+    '/',
+    async ({ body, user, tenant, set, invoiceService }) => {
+      // Requires admin or owner role effectively
+      if (user.role !== 'admin' && user.role !== 'owner') {
+        set.status = 403
+        return { code: 'FORBIDDEN', message: 'Insufficient bounds' }
+      }
+      return invoiceService.createInvoice(tenant.id, user.id, body)
+    },
+    { body: CreateInvoiceDto },
+  )
+  .post(
+    '/:id/issue',
+    async ({ params: { id }, tenant, user, set, invoiceService }) => {
+      if (user.role !== 'admin' && user.role !== 'owner') {
+        set.status = 403
+        return { code: 'FORBIDDEN', message: 'Permission denied' }
+      }
+      return invoiceService.issueInvoice(tenant.id, id)
+    },
+    { params: t.Object({ id: t.String() }) },
+  )
+  .post(
+    '/:id/void',
+    async ({ params: { id }, tenant, user, set, invoiceService }) => {
+      if (user.role !== 'admin') {
+        set.status = 403
+        return { code: 'FORBIDDEN', message: 'Only admins can void' }
+      }
+      return invoiceService.voidInvoice(tenant.id, id)
+    },
+    { params: t.Object({ id: t.String() }) },
+  )
+  .post(
+    '/:id/pay',
+    async ({ params: { id }, tenant, user, set, invoiceService }) => {
+      if (user.role !== 'admin' && user.role !== 'owner') {
+        set.status = 403
+        return { code: 'FORBIDDEN', message: 'Only admins can mark paid' }
+      }
+      return invoiceService.markPaid(tenant.id, id)
+    },
+    { params: t.Object({ id: t.String() }) },
+  )
+  .get(
+    '/:id/pdf',
+    async ({ params: { id }, tenant, invoiceService }) => {
+      const url = await invoiceService.getPdfSignedUrl(tenant.id, id)
+      return { url }
+    },
+    { params: t.Object({ id: t.String() }) },
+  )
+  .post(
+    '/:id/generate-pdf',
+    async ({ params: { id }, tenant, user, set, invoiceService }) => {
+      if (user.role !== 'admin' && user.role !== 'owner') {
+        set.status = 403
+        return { code: 'FORBIDDEN', message: 'Permission denied' }
+      }
+      return invoiceService.queuePdfGeneration(tenant.id, id)
+    },
+    { params: t.Object({ id: t.String() }) },
+  )

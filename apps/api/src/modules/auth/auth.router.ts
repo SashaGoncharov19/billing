@@ -1,108 +1,117 @@
 import { Elysia } from 'elysia'
 import { AuthSchema } from './auth.schema'
 import { AuthService } from './auth.service'
-import { loginRateLimiter } from '../../middleware/rate-limit'
-import { jwtSetup } from '../../lib/jwt'
+import { loginRateLimiter } from '@api/middleware/rate-limit'
+import { jwtSetup } from '@api/lib/jwt'
 import { redis } from 'bun'
-import { authenticate } from '../../middleware/authenticate'
+import { authenticate } from '@api/middleware/authenticate'
 import { db, memberships, tenants, users, auditLogs } from '@entityseven/db'
 import { eq } from 'drizzle-orm'
 
 export const authRouter = new Elysia({ prefix: '/auth' })
   .use(jwtSetup)
-  .post('/register', async ({ body, accessJwt, refreshJwt, cookie: { __refresh_token }, set, status }) => {
-    try {
-      const { user, tenant } = await AuthService.register(body)
+  .post(
+    '/register',
+    async ({ body, accessJwt, refreshJwt, cookie: { __refresh_token }, set, status }) => {
+      try {
+        const { user, tenant } = await AuthService.register(body)
 
-      const accessToken = await accessJwt.sign({
-        sub: user.id,
-        email: user.email,
-        tenantId: tenant.id,
-        role: 'owner'
-      })
-
-      const refreshToken = await refreshJwt.sign({
-        sub: user.id
-      })
-
-      if (__refresh_token) {
-        __refresh_token.value = refreshToken
-        __refresh_token.httpOnly = true
-        __refresh_token.secure = true
-        __refresh_token.sameSite = 'strict'
-        __refresh_token.maxAge = 604800 // 7 days
-      }
-
-      set.status = 201
-      return {
-        user: { id: user.id, email: user.email },
-        tenant,
-        accessToken,
-        expiresIn: 900
-      }
-    } catch (err: unknown) {
-      const error = err as { status?: number, code?: string, message?: string }
-      if (error.status) {
-        return status(error.status, error)
-      }
-      return status(500, { code: 'INTERNAL_ERROR', message: error.message || 'Unknown error' })
-    }
-  }, { body: AuthSchema.Register })
-  // .use(loginRateLimiter)
-  .post('/login', async ({ body, accessJwt, refreshJwt, cookie: { __refresh_token }, status }) => {
-    try {
-      const user = await AuthService.login(body.email, body.password)
-
-      // Get first tenant for payload
-      const [membershipWithTenant] = await db.select({
-        tenantId: memberships.tenantId,
-        role: memberships.role,
-        tenant: tenants
-      })
-        .from(memberships)
-        .innerJoin(tenants, eq(memberships.tenantId, tenants.id))
-        .where(eq(memberships.userId, user.id))
-        .limit(1)
-
-      const accessToken = await accessJwt.sign({
-        sub: user.id,
-        email: user.email,
-        tenantId: membershipWithTenant?.tenantId,
-        role: membershipWithTenant?.role
-      })
-
-      const refreshToken = await refreshJwt.sign({
-        sub: user.id
-      })
-
-      if (__refresh_token) {
-        __refresh_token.value = refreshToken
-        __refresh_token.httpOnly = true
-        __refresh_token.secure = true
-        __refresh_token.sameSite = 'strict'
-        __refresh_token.maxAge = 604800 // 7 days
-      }
-
-      return {
-        user: {
-          id: user.id,
+        const accessToken = await accessJwt.sign({
+          sub: user.id,
           email: user.email,
-          theme: user.theme,
-          preferredLanguage: user.preferredLanguage,
-          role: membershipWithTenant?.role
-        },
-        tenant: membershipWithTenant?.tenant ?? null,
-        accessToken,
-        expiresIn: 900
+          tenantId: tenant.id,
+          role: 'owner',
+        })
+
+        const refreshToken = await refreshJwt.sign({
+          sub: user.id,
+        })
+
+        if (__refresh_token) {
+          __refresh_token.value = refreshToken
+          __refresh_token.httpOnly = true
+          __refresh_token.secure = true
+          __refresh_token.sameSite = 'strict'
+          __refresh_token.maxAge = 604800 // 7 days
+        }
+
+        set.status = 201
+        return {
+          user: { id: user.id, email: user.email },
+          tenant,
+          accessToken,
+          expiresIn: 900,
+        }
+      } catch (err: unknown) {
+        const error = err as { status?: number; code?: string; message?: string }
+        if (error.status) {
+          return status(error.status, error)
+        }
+        return status(500, { code: 'INTERNAL_ERROR', message: error.message || 'Unknown error' })
       }
-    } catch (err: unknown) {
-      const error = err as { status?: number, code?: string, message?: string }
-      if (error.status) {
-        return status(error.status, error)
+    },
+    { body: AuthSchema.Register },
+  )
+  // .use(loginRateLimiter)
+  .post(
+    '/login',
+    async ({ body, accessJwt, refreshJwt, cookie: { __refresh_token }, status }) => {
+      try {
+        const user = await AuthService.login(body.email, body.password)
+
+        // Get first tenant for payload
+        const [membershipWithTenant] = await db
+          .select({
+            tenantId: memberships.tenantId,
+            role: memberships.role,
+            tenant: tenants,
+          })
+          .from(memberships)
+          .innerJoin(tenants, eq(memberships.tenantId, tenants.id))
+          .where(eq(memberships.userId, user.id))
+          .limit(1)
+
+        const accessToken = await accessJwt.sign({
+          sub: user.id,
+          email: user.email,
+          tenantId: membershipWithTenant?.tenantId,
+          role: membershipWithTenant?.role,
+        })
+
+        const refreshToken = await refreshJwt.sign({
+          sub: user.id,
+        })
+
+        if (__refresh_token) {
+          __refresh_token.value = refreshToken
+          __refresh_token.httpOnly = true
+          __refresh_token.secure = true
+          __refresh_token.sameSite = 'strict'
+          __refresh_token.maxAge = 604800 // 7 days
+        }
+
+        return {
+          user: {
+            id: user.id,
+            email: user.email,
+            theme: user.theme,
+            preferredLanguage: user.preferredLanguage,
+            role: membershipWithTenant?.role,
+          },
+          tenant: membershipWithTenant?.tenant ?? null,
+          accessToken,
+          expiresIn: 900,
+        }
+      } catch (err: unknown) {
+        const error = err as { status?: number; code?: string; message?: string }
+        if (error.status) {
+          return status(error.status, error)
+        }
+        return status(500, { code: 'INTERNAL_ERROR', message: error.message || 'Unknown error' })
       }
-      return status(500, { code: 'INTERNAL_ERROR', message: error.message || 'Unknown error' })
-    }
-  }, { body: AuthSchema.Login })
+    },
+    { body: AuthSchema.Login },
+  )
   .post('/refresh', async ({ cookie: { __refresh_token }, refreshJwt, accessJwt, status }) => {
     const token = __refresh_token?.value as string | undefined
     if (!token) return status(401, { code: 'UNAUTHORIZED', message: 'No refresh token' })
@@ -118,14 +127,22 @@ export const authRouter = new Elysia({ prefix: '/auth' })
       return status(401, { code: 'TOKEN_EXPIRED', message: 'Invalid or expired refresh token' })
     }
 
-    const existingUsers = await db.select().from(users).where(eq(users.id, payload.sub as string)).limit(1)
+    const existingUsers = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, payload.sub as string))
+      .limit(1)
     const user = existingUsers[0]
     if (!user) return status(401, { code: 'UNAUTHORIZED', message: 'User not found' })
 
-    const [membership] = await db.select({
-      tenantId: memberships.tenantId,
-      role: memberships.role
-    }).from(memberships).where(eq(memberships.userId, user.id)).limit(1)
+    const [membership] = await db
+      .select({
+        tenantId: memberships.tenantId,
+        role: memberships.role,
+      })
+      .from(memberships)
+      .where(eq(memberships.userId, user.id))
+      .limit(1)
 
     // Add old token to blacklist
     await redis.setex(`bl_token:${token}`, 604800, '1')
@@ -134,7 +151,7 @@ export const authRouter = new Elysia({ prefix: '/auth' })
       sub: user.id,
       email: user.email,
       tenantId: membership?.tenantId,
-      role: membership?.role
+      role: membership?.role,
     })
     const newRefreshToken = await refreshJwt.sign({ sub: user.id })
 
@@ -144,7 +161,7 @@ export const authRouter = new Elysia({ prefix: '/auth' })
 
     return {
       accessToken: newAccessToken,
-      expiresIn: 900
+      expiresIn: 900,
     }
   })
   .use(authenticate)
@@ -159,7 +176,7 @@ export const authRouter = new Elysia({ prefix: '/auth' })
       await db.insert(auditLogs).values({
         tenantId: user.tenantId,
         userId: user.id,
-        action: 'user.logout'
+        action: 'user.logout',
       })
     }
 
@@ -168,11 +185,12 @@ export const authRouter = new Elysia({ prefix: '/auth' })
   .get('/me', async ({ user }) => {
     const dbUser = await db.query.users.findFirst({ where: eq(users.id, user.id) })
 
-    const userMemberships = await db.select({
-      tenantId: memberships.tenantId,
-      role: memberships.role,
-      tenantName: tenants.name
-    })
+    const userMemberships = await db
+      .select({
+        tenantId: memberships.tenantId,
+        role: memberships.role,
+        tenantName: tenants.name,
+      })
       .from(memberships)
       .innerJoin(tenants, eq(memberships.tenantId, tenants.id))
       .where(eq(memberships.userId, user.id))
@@ -190,65 +208,70 @@ export const authRouter = new Elysia({ prefix: '/auth' })
       billingAddress: dbUser?.billingAddress,
       billingTaxId: dbUser?.billingTaxId,
       billingEmail: dbUser?.billingEmail,
-      billingCountry: dbUser?.billingCountry
+      billingCountry: dbUser?.billingCountry,
     }
   })
-  .patch('/me', async ({ body, user, set }) => {
-    try {
-      const [updated] = await db.update(users)
-        .set(body)
-        .where(eq(users.id, user.id))
-        .returning()
-      return updated
-    } catch (e) {
-      set.status = 500
-      return { message: 'Failed to update user' }
-    }
-  }, { body: AuthSchema.UpdateMe })
-  .post('/switch-tenant', async ({ body, user, accessJwt, set }) => {
-    try {
-      const u = user as unknown as { id?: string; sub?: string }
-      if (!u || (!u.id && !u.sub)) {
-        set.status = 401
-        return 'Unauthorized'
+  .patch(
+    '/me',
+    async ({ body, user, set }) => {
+      try {
+        const [updated] = await db.update(users).set(body).where(eq(users.id, user.id)).returning()
+        return updated
+      } catch (e) {
+        set.status = 500
+        return { message: 'Failed to update user' }
       }
+    },
+    { body: AuthSchema.UpdateMe },
+  )
+  .post(
+    '/switch-tenant',
+    async ({ body, user, accessJwt, set }) => {
+      try {
+        const u = user as unknown as { id?: string; sub?: string }
+        if (!u || (!u.id && !u.sub)) {
+          set.status = 401
+          return 'Unauthorized'
+        }
 
-      const userId = u.id || (u.sub as string);
+        const userId = u.id || (u.sub as string)
 
-      // Check if user has membership in target tenant
-      const userMemberships = await db.select({
-        tenantId: memberships.tenantId,
-        role: memberships.role
-      })
-        .from(memberships)
-        .where(eq(memberships.userId, userId))
+        // Check if user has membership in target tenant
+        const userMemberships = await db
+          .select({
+            tenantId: memberships.tenantId,
+            role: memberships.role,
+          })
+          .from(memberships)
+          .where(eq(memberships.userId, userId))
 
-      const targetMembership = userMemberships.find(m => m.tenantId === body.tenantId)
+        const targetMembership = userMemberships.find((m) => m.tenantId === body.tenantId)
 
-      if (!targetMembership) {
-        set.status = 403
-        return { code: 'FORBIDDEN', message: 'You are not a member of this tenant' }
+        if (!targetMembership) {
+          set.status = 403
+          return { code: 'FORBIDDEN', message: 'You are not a member of this tenant' }
+        }
+
+        const newAccessToken = await accessJwt.sign({
+          sub: userId,
+          email: user.email as string,
+          tenantId: targetMembership.tenantId,
+          role: targetMembership.role,
+        })
+
+        const targetTenant = await db.query.tenants.findFirst({
+          where: eq(tenants.id, body.tenantId),
+        })
+
+        return {
+          accessToken: newAccessToken,
+          tenant: targetTenant,
+        }
+      } catch (e) {
+        console.error(e)
+        set.status = 500
+        return 'Internal Server Error'
       }
-
-      const newAccessToken = await accessJwt.sign({
-        sub: userId,
-        email: user.email as string,
-        tenantId: targetMembership.tenantId,
-        role: targetMembership.role
-      })
-
-      const targetTenant = await db.query.tenants.findFirst({
-        where: eq(tenants.id, body.tenantId)
-      })
-
-      return {
-        accessToken: newAccessToken,
-        tenant: targetTenant
-      }
-    } catch (e) {
-      console.error(e)
-      set.status = 500
-      return 'Internal Server Error'
-    }
-  }, { body: AuthSchema.SwitchTenant })
-
+    },
+    { body: AuthSchema.SwitchTenant },
+  )

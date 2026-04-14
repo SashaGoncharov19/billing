@@ -39,19 +39,21 @@ export function generateInvoiceHtml(invoice: InvoiceViewData, tenant: Tenant): s
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     }).format(new Date(date))
   }
 
-  const badgeColor = invoice.status === 'paid' ? '#D1FAE5' : invoice.status === 'open' ? '#DBEAFE' : '#FEF3C7'
-  const badgeTextColor = invoice.status === 'paid' ? '#065F46' : invoice.status === 'open' ? '#1E40AF' : '#92400E'
+  const badgeColor =
+    invoice.status === 'paid' ? '#D1FAE5' : invoice.status === 'open' ? '#DBEAFE' : '#FEF3C7'
+  const badgeTextColor =
+    invoice.status === 'paid' ? '#065F46' : invoice.status === 'open' ? '#1E40AF' : '#92400E'
 
   const issuer = invoice.issuerDetails || {
     name: tenant.billingEntity || tenant.name,
     address: tenant.billingAddress,
     taxId: tenant.billingTaxId,
     email: tenant.billingEmail,
-    country: tenant.billingCountry
+    country: tenant.billingCountry,
   }
 
   const recipient = invoice.recipientDetails || {}
@@ -180,7 +182,10 @@ export function generateInvoiceHtml(invoice: InvoiceViewData, tenant: Tenant): s
       </tr>
     </thead>
     <tbody>
-      ${invoice.items?.map((item: any) => `
+      ${
+        invoice.items
+          ?.map(
+            (item: any) => `
         <tr>
           <td>${item.description}</td>
           <td>${item.quantity}</td>
@@ -188,7 +193,10 @@ export function generateInvoiceHtml(invoice: InvoiceViewData, tenant: Tenant): s
           <td>${Number(item.taxRate) * 100}%</td>
           <td>${formatMoney(item.totalAmount, invoice.currency)}</td>
         </tr>
-      `).join('') || ''}
+      `,
+          )
+          .join('') || ''
+      }
     </tbody>
   </table>
 
@@ -198,12 +206,16 @@ export function generateInvoiceHtml(invoice: InvoiceViewData, tenant: Tenant): s
       <div class="total-row">Total: ${formatMoney(invoice.totalAmount, invoice.currency)}</div>
     </div>
     
-    ${invoice.notes ? `
+    ${
+      invoice.notes
+        ? `
       <div style="margin-top: 40px; padding-top: 24px; border-top: 1px solid #E5E7EB; color: #6B7280; font-size: 14px;">
         <strong>Notes:</strong><br/>
         ${invoice.notes.replace(/\n/g, '<br/>')}
       </div>
-    ` : ''}
+    `
+        : ''
+    }
 </body>
 </html>`
 }

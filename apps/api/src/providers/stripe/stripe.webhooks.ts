@@ -1,19 +1,23 @@
 import { db, subscriptions, payments, invoices, tenants, products } from '@entityseven/db'
 import { eq } from 'drizzle-orm'
-import { PluginManager } from '../../modules/plugins/plugin.manager'
+import { PluginManager } from '@api/modules/plugins/plugin.manager'
 import type { WebhookEvent } from '../payment-provider.interface'
 import { z } from 'zod'
 
-const WebhookDataSchema = z.object({
-  id: z.string().optional(),
-  payment_intent: z.string().optional(),
-  customer: z.string().optional(),
-  subscription: z.string().optional(),
-  status: z.enum(['trialing', 'active', 'past_due', 'canceled', 'unpaid', 'incomplete']).optional(),
-  current_period_end: z.number().optional(),
-  cancel_at_period_end: z.boolean().optional(),
-  metadata: z.record(z.string(), z.string()).optional(),
-}).loose()
+const WebhookDataSchema = z
+  .object({
+    id: z.string().optional(),
+    payment_intent: z.string().optional(),
+    customer: z.string().optional(),
+    subscription: z.string().optional(),
+    status: z
+      .enum(['trialing', 'active', 'past_due', 'canceled', 'unpaid', 'incomplete'])
+      .optional(),
+    current_period_end: z.number().optional(),
+    cancel_at_period_end: z.boolean().optional(),
+    metadata: z.record(z.string(), z.string()).optional(),
+  })
+  .loose()
 
 export async function handleWebhookEvent(event: WebhookEvent) {
   switch (event.type) {
@@ -51,7 +55,7 @@ async function handleCheckoutCompleted(event: WebhookEvent) {
   if (!customerId || !subscriptionId) return
 
   const tenant = await db.query.tenants.findFirst({
-    where: eq(tenants.stripeCustomerId, customerId)
+    where: eq(tenants.stripeCustomerId, customerId),
   })
 
   if (!tenant) {
@@ -60,25 +64,36 @@ async function handleCheckoutCompleted(event: WebhookEvent) {
   }
 
   const existingSub = await db.query.subscriptions.findFirst({
-    where: eq(subscriptions.providerSubscriptionId, subscriptionId)
+    where: eq(subscriptions.providerSubscriptionId, subscriptionId),
   })
 
   if (!existingSub) {
-    const newSubs = await db.insert(subscriptions).values({
-      tenantId: tenant.id,
-      productId: productId || null,
-      provider: 'stripe',
-      providerSubscriptionId: subscriptionId,
-      status: 'active',
-    }).returning()
-    
+    const newSubs = await db
+      .insert(subscriptions)
+      .values({
+        tenantId: tenant.id,
+        productId: productId || null,
+        provider: 'stripe',
+        providerSubscriptionId: subscriptionId,
+        status: 'active',
+      })
+      .returning()
+
     const newSub = newSubs[0]
 
     if (productId && newSub) {
       const product = await db.query.products.findFirst({ where: eq(products.id, productId) })
       if (product?.pluginType) {
-        console.log(`[PluginManager] Triggering provision for product ${productId} with plugin ${product.pluginType}`)
-        await PluginManager.dispatch('provision', product.pluginType, tenant.id, newSub.id, product.pluginConfig)
+        console.log(
+          `[PluginManager] Triggering provision for product ${productId} with plugin ${product.pluginType}`,
+        )
+        await PluginManager.dispatch(
+          'provision',
+          product.pluginType,
+          tenant.id,
+          newSub.id,
+          product.pluginConfig,
+        )
       }
     }
   }
@@ -92,14 +107,16 @@ async function handlePaymentSucceeded(event: WebhookEvent) {
   if (!providerPaymentId) return
 
   await db.transaction(async (tx) => {
-    const updatedPayments = await tx.update(payments)
+    const updatedPayments = await tx
+      .update(payments)
       .set({ status: 'succeeded' })
       .where(eq(payments.providerPaymentId, providerPaymentId))
       .returning()
 
     for (const payment of updatedPayments) {
       if (payment.invoiceId) {
-        await tx.update(invoices)
+        await tx
+          .update(invoices)
           .set({ status: 'paid', paidAt: new Date() })
           .where(eq(invoices.id, payment.invoiceId))
       }
@@ -113,7 +130,8 @@ async function handlePaymentFailed(event: WebhookEvent) {
   if (!providerPaymentId) return
 
   await db.transaction(async (tx) => {
-    await tx.update(payments)
+    await tx
+      .update(payments)
       .set({ status: 'failed' })
       .where(eq(payments.providerPaymentId, providerPaymentId))
   })
@@ -128,7 +146,8 @@ async function handleSubscriptionUpdated(event: WebhookEvent) {
   if (!providerSubscriptionId || !status || !currentPeriodEndNum) return
 
   await db.transaction(async (tx) => {
-    await tx.update(subscriptions)
+    await tx
+      .update(subscriptions)
       .set({
         status: status,
         currentPeriodEnd: new Date(currentPeriodEndNum * 1000),
@@ -142,9 +161,10 @@ async function handleInvoicePaid(event: WebhookEvent) {
   const eventData = WebhookDataSchema.parse(event.data)
   const subscriptionId = eventData.subscription
   if (!subscriptionId) return
-  
+
   await db.transaction(async (tx) => {
-    await tx.update(subscriptions)
+    await tx
+      .update(subscriptions)
       .set({ status: 'active' })
       .where(eq(subscriptions.providerSubscriptionId, subscriptionId))
   })
@@ -156,7 +176,8 @@ async function handleInvoicePaymentFailed(event: WebhookEvent) {
   if (!subscriptionId) return
 
   await db.transaction(async (tx) => {
-    await tx.update(subscriptions)
+    await tx
+      .update(subscriptions)
       .set({ status: 'past_due' })
       .where(eq(subscriptions.providerSubscriptionId, subscriptionId))
   })

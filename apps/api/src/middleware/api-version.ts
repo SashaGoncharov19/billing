@@ -5,7 +5,7 @@ import pkg from '../../package.json'
 export const apiVersionMiddleware = new Elysia({ name: 'api-version' })
   .derive({ as: 'global' }, ({ headers }) => ({
     // Беремо версію з хедера або fallback на поточну версію бекенда
-    clientApiVersion: headers['x-api-version'] || pkg.version
+    clientApiVersion: headers['x-api-version'] || pkg.version,
   }))
   .onBeforeHandle({ as: 'global' }, ({ headers, set }) => {
     const clientVersion = headers['x-api-version']
@@ -17,7 +17,7 @@ export const apiVersionMiddleware = new Elysia({ name: 'api-version' })
         set.status = 400
         return {
           code: 'UNSUPPORTED_VERSION',
-          message: `Your API version (${clientVersion}) is no longer supported. Please upgrade. Minimum required: ${minSupported}`
+          message: `Your API version (${clientVersion}) is no longer supported. Please upgrade. Minimum required: ${minSupported}`,
         }
       }
     }

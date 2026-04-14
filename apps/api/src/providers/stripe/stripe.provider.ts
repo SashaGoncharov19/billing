@@ -6,17 +6,19 @@ import type {
   CreateSubscriptionData,
   SubscriptionData,
   WebhookPayload,
-  WebhookEvent
+  WebhookEvent,
 } from '../payment-provider.interface'
 
 import { z } from 'zod'
 
-const StripeSubscriptionObjectSchema = z.object({
-  id: z.string(),
-  status: z.string(),
-  current_period_end: z.number(),
-  cancel_at_period_end: z.boolean().default(false),
-}).loose()
+const StripeSubscriptionObjectSchema = z
+  .object({
+    id: z.string(),
+    status: z.string(),
+    current_period_end: z.number(),
+    cancel_at_period_end: z.boolean().default(false),
+  })
+  .loose()
 
 export class StripeProvider implements PaymentProvider {
   private stripe: Stripe
@@ -50,17 +52,17 @@ export class StripeProvider implements PaymentProvider {
   }
 
   async createCheckoutSession(data: CreateCheckoutSessionData) {
-    const line_items = data.lineItems 
-      ? data.lineItems.map(li => {
-          const item: any = { quantity: li.quantity };
-          if (li.priceId) item.price = li.priceId;
-          if (li.priceData) item.price_data = li.priceData;
-          return item;
+    const line_items = data.lineItems
+      ? data.lineItems.map((li) => {
+          const item: any = { quantity: li.quantity }
+          if (li.priceId) item.price = li.priceId
+          if (li.priceData) item.price_data = li.priceData
+          return item
         })
-      : data.priceId 
+      : data.priceId
         ? [{ price: data.priceId, quantity: data.quantity ?? 1 }]
-        : [];
-        
+        : []
+
     const session = await this.stripe.checkout.sessions.create({
       customer: data.customerId,
       mode: data.mode,
@@ -111,10 +113,12 @@ export class StripeProvider implements PaymentProvider {
     if (!subscription.items.data[0]) throw new Error('No subscription items found')
     const itemId = subscription.items.data[0].id
     await this.stripe.subscriptions.update(subscriptionId, {
-      items: [{
-        id: itemId,
-        price: priceId,
-      }],
+      items: [
+        {
+          id: itemId,
+          price: priceId,
+        },
+      ],
     })
   }
 
@@ -131,14 +135,14 @@ export class StripeProvider implements PaymentProvider {
 
   verifyWebhook(payload: WebhookPayload): boolean {
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
-      console.warn('STRIPE_WEBHOOK_SECRET is not set. Webhook verification skipping/failing.');
-      return false;
+      console.warn('STRIPE_WEBHOOK_SECRET is not set. Webhook verification skipping/failing.')
+      return false
     }
     try {
       this.stripe.webhooks.constructEvent(
         payload.rawBody,
         payload.signature,
-        process.env.STRIPE_WEBHOOK_SECRET
+        process.env.STRIPE_WEBHOOK_SECRET,
       )
       return true
     } catch {
@@ -150,7 +154,7 @@ export class StripeProvider implements PaymentProvider {
     const event = this.stripe.webhooks.constructEvent(
       payload.rawBody,
       payload.signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      process.env.STRIPE_WEBHOOK_SECRET!,
     )
     return this.mapStripeEvent(event)
   }

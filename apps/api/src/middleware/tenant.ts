@@ -11,10 +11,7 @@ export const resolveTenant = new Elysia({ name: 'resolve-tenant' })
     }
 
     const tenant = await db.query.tenants.findFirst({
-      where: and(
-        eq(tenants.id, user.tenantId),
-        isNull(tenants.deletedAt)
-      )
+      where: and(eq(tenants.id, user.tenantId), isNull(tenants.deletedAt)),
     })
 
     if (!tenant) {

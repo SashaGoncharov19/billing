@@ -8,8 +8,12 @@ export interface CreateCustomerData {
 export interface CreateCheckoutSessionData {
   tenantId: string
   customerId: string
-  priceId?: string           // Stripe Price ID or internal product ID
-  lineItems?: { priceId?: string, priceData?: { currency: string, product_data: { name: string }, unit_amount: number }, quantity: number }[]
+  priceId?: string // Stripe Price ID or internal product ID
+  lineItems?: {
+    priceId?: string
+    priceData?: { currency: string; product_data: { name: string }; unit_amount: number }
+    quantity: number
+  }[]
   successUrl: string
   cancelUrl: string
   metadata?: Record<string, string>
@@ -38,16 +42,23 @@ export interface WebhookPayload {
 }
 
 export interface WebhookEvent {
-  type: 'checkout.completed' | 'payment.succeeded' | 'payment.failed' |
-        'subscription.created' | 'subscription.updated' | 'subscription.canceled' |
-        'invoice.paid' | 'invoice.payment_failed' | 'unknown'
+  type:
+    | 'checkout.completed'
+    | 'payment.succeeded'
+    | 'payment.failed'
+    | 'subscription.created'
+    | 'subscription.updated'
+    | 'subscription.canceled'
+    | 'invoice.paid'
+    | 'invoice.payment_failed'
+    | 'unknown'
   data: Record<string, unknown>
-  providerId: string    // Provider event ID
+  providerId: string // Provider event ID
 }
 
 export interface PaymentProvider {
   // Customer management
-  createCustomer(data: CreateCustomerData): Promise<string>  // returns providerId
+  createCustomer(data: CreateCustomerData): Promise<string> // returns providerId
   updateCustomer(customerId: string, data: Partial<CreateCustomerData>): Promise<void>
 
   // Checkout

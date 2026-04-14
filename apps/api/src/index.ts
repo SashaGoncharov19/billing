@@ -8,7 +8,7 @@ import { requestLogger } from './middleware/request-logger'
 import { errorHandler } from './middleware/error-handler'
 import { apiVersionMiddleware } from './middleware/api-version'
 import { healthRouter } from './health'
-import { authRouter } from "./modules/auth/auth.router"
+import { authRouter } from './modules/auth/auth.router'
 import { tenantRouter } from './modules/tenants/tenant.router'
 import { billingRouter, webhookRouter } from './modules/billing/billing.router'
 import { productsRouter } from './modules/products/products.router'
@@ -34,24 +34,34 @@ if (process.env.NODE_ENV !== 'test') {
 
 export const app = new Elysia()
   // Global middleware
-  .use(cors({
-    origin: config.ALLOWED_ORIGINS.split(','),
-    credentials: true,
-    allowedHeaders: ['Authorization', 'Content-Type', 'X-Request-Id', 'X-Idempotency-Key', 'X-API-Version'],
-  }))
-  .use(swagger({
-    path: '/docs',
-    documentation: {
-      info: {
-        title: 'Entity Seven API',
-        version: pkg.version, 
-        description: 'Entity Seven SaaS Billing Platform API',
+  .use(
+    cors({
+      origin: config.ALLOWED_ORIGINS.split(','),
+      credentials: true,
+      allowedHeaders: [
+        'Authorization',
+        'Content-Type',
+        'X-Request-Id',
+        'X-Idempotency-Key',
+        'X-API-Version',
+      ],
+    }),
+  )
+  .use(
+    swagger({
+      path: '/docs',
+      documentation: {
+        info: {
+          title: 'Entity Seven API',
+          version: pkg.version,
+          description: 'Entity Seven SaaS Billing Platform API',
+        },
       },
-    },
-  }))
+    }),
+  )
   .use(requestIdMiddleware)
   .use(requestLogger)
-  .use(apiVersionMiddleware) 
+  .use(apiVersionMiddleware)
   .use(errorHandler)
 
   .use(healthRouter)
@@ -70,13 +80,12 @@ export const app = new Elysia()
       .use(storeRouter)
   })
 
-  .use(adminRouter);
-
+  .use(adminRouter)
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(bullBoard.registerPlugin())
   // Automatically seed admin if the DB is fresh
-  bootstrapDatabase().catch(e => logger.error('Bootstrap failed', e))
+  bootstrapDatabase().catch((e) => logger.error('Bootstrap failed', e))
 }
 
 app.listen(config.API_PORT)

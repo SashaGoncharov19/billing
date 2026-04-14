@@ -3,7 +3,7 @@ import { eq, and, desc, type SQL } from 'drizzle-orm'
 import { InvoiceStatus, VALID_TRANSITIONS, InvalidTransitionError } from './invoice.types'
 import { getNextInvoiceNumber } from './invoice.numbering'
 import { getInvoiceSignedUrl } from './invoice.pdf'
-import { pdfQueue } from '../../queue'
+import { pdfQueue } from '@api/queue'
 
 export class InvoiceService {
   private validateTransition(current: InvoiceStatus, next: InvoiceStatus) {
@@ -12,7 +12,11 @@ export class InvoiceService {
     }
   }
 
-  async createInvoice(tenantId: string, userId: string, data: { currency?: string; dueAt?: string; notes?: string; items: any[] }) {
+  async createInvoice(
+    tenantId: string,
+    userId: string,
+    data: { currency?: string; dueAt?: string; notes?: string; items: any[] },
+  ) {
     if (!data.items || data.items.length === 0) {
       throw new Error('Invoice must have at least 1 item')
     }
@@ -20,20 +24,20 @@ export class InvoiceService {
     let subtotalAmount = 0
     let taxAmount = 0
 
-    const itemsToInsert = data.items.map(item => {
+    const itemsToInsert = data.items.map((item) => {
       const q = Number(item.quantity)
       const p = parseFloat(item.unitPrice)
       const t = parseFloat(item.taxRate)
       const lineTotal = q * p * (1 + t)
 
-      subtotalAmount += (q * p)
-      taxAmount += (q * p * t)
+      subtotalAmount += q * p
+      taxAmount += q * p * t
 
       return {
         ...item,
         unitPrice: String(p),
         taxRate: String(t),
-        totalAmount: String(lineTotal.toFixed(2))
+        totalAmount: String(lineTotal.toFixed(2)),
       }
     })
 
@@ -41,26 +45,29 @@ export class InvoiceService {
 
     return await db.transaction(async (tx) => {
       // Create invoice document
-      const [invoice] = await tx.insert(invoices).values({
-        tenantId,
-        status: 'draft',
-        currency: data.currency || 'USD',
-        subtotalAmount: String(subtotalAmount.toFixed(2)),
-        taxAmount: String(taxAmount.toFixed(2)),
-        totalAmount: String(totalAmount.toFixed(2)),
-        notes: data.notes,
-        createdByUserId: userId,
-        dueAt: data.dueAt ? new Date(data.dueAt) : null,
-      }).returning()
+      const [invoice] = await tx
+        .insert(invoices)
+        .values({
+          tenantId,
+          status: 'draft',
+          currency: data.currency || 'USD',
+          subtotalAmount: String(subtotalAmount.toFixed(2)),
+          taxAmount: String(taxAmount.toFixed(2)),
+          totalAmount: String(totalAmount.toFixed(2)),
+          notes: data.notes,
+          createdByUserId: userId,
+          dueAt: data.dueAt ? new Date(data.dueAt) : null,
+        })
+        .returning()
 
       if (!invoice) throw new Error('Failed to create invoice')
 
       // Add items
       await tx.insert(invoiceItems).values(
-        itemsToInsert.map(item => ({
+        itemsToInsert.map((item) => ({
           invoiceId: invoice.id,
-          ...item
-        }))
+          ...item,
+        })),
       )
 
       return invoice
@@ -80,7 +87,7 @@ export class InvoiceService {
     const data = await db.query.invoices.findMany({
       where: and(...conditions),
       orderBy: [desc(invoices.createdAt)],
-      limit
+      limit,
     })
 
     return { data }
@@ -90,10 +97,10 @@ export class InvoiceService {
     const invoice = await db.query.invoices.findFirst({
       where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)),
       with: {
-        items: true
-      }
+        items: true,
+      },
     })
-    
+
     if (!invoice) throw new Error('Invoice not found')
     return invoice
   }
@@ -109,7 +116,8 @@ export class InvoiceService {
 
       const nextNumber = await getNextInvoiceNumber(tenantId, tx)
 
-      const [updated] = await tx.update(invoices)
+      const [updated] = await tx
+        .update(invoices)
         .set({
           status: 'open',
           number: nextNumber,
@@ -121,9 +129,9 @@ export class InvoiceService {
 
       await pdfQueue.add('generate-pdf', {
         type: 'invoice',
-        data: { tenantId, invoiceId }
+        data: { tenantId, invoiceId },
       })
-      
+
       return updated
     })
   }
@@ -131,17 +139,19 @@ export class InvoiceService {
   async voidInvoice(tenantId: string, invoiceId: string) {
     return await db.transaction(async (tx) => {
       const invoice = await tx.query.invoices.findFirst({
-        where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId))
+        where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)),
       })
 
       if (!invoice) throw new Error('Invoice not found')
       this.validateTransition(invoice.status as InvoiceStatus, 'void')
 
-      if (invoice.paidAmount !== '0') { // simplification
+      if (invoice.paidAmount !== '0') {
+        // simplification
         throw new Error('Cannot void invoice that has payments')
       }
 
-      const [updated] = await tx.update(invoices)
+      const [updated] = await tx
+        .update(invoices)
         .set({
           status: 'void',
           voidedAt: new Date(),
@@ -166,7 +176,7 @@ export class InvoiceService {
     await this.getInvoiceById(tenantId, invoiceId) // validate it exists
     await pdfQueue.add('generate-pdf', {
       type: 'invoice',
-      data: { tenantId, invoiceId }
+      data: { tenantId, invoiceId },
     })
     return { status: 'queued' }
   }
@@ -174,23 +184,24 @@ export class InvoiceService {
   async markPaid(tenantId: string, invoiceId: string) {
     const updatedInvoice = await db.transaction(async (tx) => {
       const invoice = await tx.query.invoices.findFirst({
-        where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId))
+        where: and(eq(invoices.id, invoiceId), eq(invoices.tenantId, tenantId)),
       })
 
       if (!invoice) throw new Error('Invoice not found')
       this.validateTransition(invoice.status as InvoiceStatus, 'paid')
 
-      const [updated] = await tx.update(invoices)
+      const [updated] = await tx
+        .update(invoices)
         .set({
           status: 'paid',
           paidAmount: invoice.totalAmount,
           paidAt: new Date(),
           updatedAt: new Date(),
-          pdfUrl: null // Invalidate the old PDF so it can be regenerated
+          pdfUrl: null, // Invalidate the old PDF so it can be regenerated
         })
         .where(eq(invoices.id, invoiceId))
         .returning()
-        
+
       return updated
     })
 
@@ -198,7 +209,9 @@ export class InvoiceService {
     await this.queuePdfGeneration(tenantId, invoiceId).catch(console.error)
 
     // Simulate Payment Confirmed Email dispatch to the user
-    console.log(`[EMAIL DISPATCH] Mock sending "Payment Confirmed" email to user for invoice ${invoiceId}`)
+    console.error(
+      `[EMAIL DISPATCH] Mock sending "Payment Confirmed" email to user for invoice ${invoiceId}`,
+    )
 
     return updatedInvoice
   }

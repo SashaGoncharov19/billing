@@ -1,6 +1,6 @@
 import { db, users, auditLogs, tenants, memberships } from '@entityseven/db'
 import { eq } from 'drizzle-orm'
-import { hashPassword, verifyPassword } from '../../lib/password'
+import { hashPassword, verifyPassword } from '@api/lib/password'
 import { type Static } from 'elysia'
 import { AuthSchema } from './auth.schema'
 
@@ -15,20 +15,26 @@ export class AuthService {
 
     return await db.transaction(async (tx) => {
       // 1. Create User
-      const [newUser] = await tx.insert(users).values({
-        email: input.email,
-        passwordHash: hashedPassword,
-        firstName: input.firstName,
-        lastName: input.lastName,
-      }).returning()
+      const [newUser] = await tx
+        .insert(users)
+        .values({
+          email: input.email,
+          passwordHash: hashedPassword,
+          firstName: input.firstName,
+          lastName: input.lastName,
+        })
+        .returning()
 
       // 2. Create Personal Tenant
       const slugBase = input.tenantName.toLowerCase().replace(/[^a-z0-9]/g, '-')
       const slug = `${slugBase}-${Date.now().toString().slice(-4)}`
-      const [newTenant] = await tx.insert(tenants).values({
-        name: input.tenantName,
-        slug: slug
-      }).returning()
+      const [newTenant] = await tx
+        .insert(tenants)
+        .values({
+          name: input.tenantName,
+          slug: slug,
+        })
+        .returning()
 
       if (!newUser || !newTenant) throw new Error('Failed to create user or tenant')
 
@@ -37,7 +43,7 @@ export class AuthService {
         userId: newUser.id,
         tenantId: newTenant.id,
         role: 'member',
-        joinedAt: new Date()
+        joinedAt: new Date(),
       })
 
       // 4. Create Audit Log

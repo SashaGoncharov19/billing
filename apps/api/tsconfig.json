@@ -3,7 +3,10 @@
   "compilerOptions": {
     "types": ["bun-types"],
     "declaration": false,
-    "declarationMap": false
+    "declarationMap": false,
+    "paths": {
+      "@api/*": ["./src/*"]
+    }
   },
   "include": ["src/**/*", "test/**/*"]
 }
