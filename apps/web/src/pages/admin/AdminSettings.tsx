@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { useAdminTenant, useAdminUpdateTenant } from '@/lib/api-admin'
+import { useAdminSettings, useAdminUpdateSettings } from '@/lib/api-admin'
 import { Save, Store, Truck, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function AdminSettings() {
-  const { data: tenant, isLoading } = useAdminTenant()
-  const updateTenant = useAdminUpdateTenant()
+  const { data: settings, isLoading } = useAdminSettings()
+  const updateSettings = useAdminUpdateSettings()
   
   const [formData, setFormData] = useState({
     billingEntity: '',
@@ -16,21 +16,21 @@ export default function AdminSettings() {
   })
 
   useEffect(() => {
-    if (tenant) {
+    if (settings) {
       setFormData({
-        billingEntity: tenant.billingEntity || '',
-        billingAddress: tenant.billingAddress || '',
-        billingTaxId: tenant.billingTaxId || '',
-        billingEmail: tenant.billingEmail || '',
-        billingCountry: tenant.billingCountry || ''
+        billingEntity: settings.billingEntity || '',
+        billingAddress: settings.billingAddress || '',
+        billingTaxId: settings.billingTaxId || '',
+        billingEmail: settings.billingEmail || '',
+        billingCountry: settings.billingCountry || ''
       })
     }
-  }, [tenant])
+  }, [settings])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      await updateTenant.mutateAsync(formData)
+      await updateSettings.mutateAsync(formData)
       toast.success('Invoicing settings saved successfully')
     } catch(e: any) {
       toast.error(e.response?.data?.message || 'Failed to save settings')
@@ -130,10 +130,10 @@ export default function AdminSettings() {
             <div className="p-4 bg-muted/20 flex justify-end">
               <button 
                 type="submit" 
-                disabled={updateTenant.isPending}
+                disabled={updateSettings.isPending}
                 className="bg-primary text-primary-foreground px-6 py-2 rounded-lg font-medium flex items-center gap-2 disabled:opacity-50"
               >
-                {updateTenant.isPending ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                {updateSettings.isPending ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
                 Save Details
               </button>
             </div>

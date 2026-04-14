@@ -64,6 +64,13 @@
       "when": 1776118622594,
       "tag": "0008_good_eternals",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1776187036195,
+      "tag": "0009_long_the_hunter",
+      "breakpoints": true
     }
   ]
 }

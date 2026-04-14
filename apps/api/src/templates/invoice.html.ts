@@ -1,4 +1,4 @@
-import type { Invoice, Tenant } from '@entityseven/db'
+import type { Invoice, AppSettings } from '@entityseven/db'
 
 export type InvoiceViewData = Invoice & {
   items: Array<{
@@ -23,7 +23,7 @@ export type InvoiceViewData = Invoice & {
   }
 }
 
-export function generateInvoiceHtml(invoice: InvoiceViewData, tenant: Tenant): string {
+export function generateInvoiceHtml(invoice: InvoiceViewData, appSettings?: AppSettings | null): string {
   // Simple format helpers
   const formatMoney = (amount: string | number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -49,11 +49,11 @@ export function generateInvoiceHtml(invoice: InvoiceViewData, tenant: Tenant): s
     invoice.status === 'paid' ? '#065F46' : invoice.status === 'open' ? '#1E40AF' : '#92400E'
 
   const issuer = invoice.issuerDetails || {
-    name: tenant.billingEntity || tenant.name,
-    address: tenant.billingAddress,
-    taxId: tenant.billingTaxId,
-    email: tenant.billingEmail,
-    country: tenant.billingCountry,
+    name: appSettings?.billingEntity || 'System Provider',
+    address: appSettings?.billingAddress,
+    taxId: appSettings?.billingTaxId,
+    email: appSettings?.billingEmail,
+    country: appSettings?.billingCountry,
   }
 
   const recipient = invoice.recipientDetails || {}
@@ -81,7 +81,7 @@ export function generateInvoiceHtml(invoice: InvoiceViewData, tenant: Tenant): s
     .invoice-number {
       font-size: 24px;
       font-weight: 700;
-      color: ${tenant.primaryColor ?? '#3B82F6'};
+      color: ${appSettings?.primaryColor ?? '#3B82F6'};
     }
     .addresses {
       display: flex;
@@ -139,7 +139,7 @@ export function generateInvoiceHtml(invoice: InvoiceViewData, tenant: Tenant): s
 <body>
   <div class="header">
     <div>
-      <h2>${issuer.name || tenant.name}</h2>
+      <h2>${issuer.name || appSettings?.billingEntity || 'System Provider'}</h2>
     </div>
     <div style="text-align: right">
       <div class="invoice-number">Invoice #${String(invoice.number).padStart(6, '0')}</div>

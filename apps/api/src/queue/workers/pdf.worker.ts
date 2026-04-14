@@ -2,7 +2,7 @@ import { Worker } from 'bullmq'
 import { bullMqConnection } from '../client'
 import type { PdfJob } from '../types'
 import { db } from '@entityseven/db'
-import { invoices, tenants } from '@entityseven/db'
+import { invoices, appSettings } from '@entityseven/db'
 import { and, eq } from 'drizzle-orm'
 import { generateInvoiceHtml, type InvoiceViewData } from '@api/templates/invoice.html'
 import { generatePdf, uploadInvoicePdf, deleteInvoicePdf } from '@api/modules/invoices/invoice.pdf'
@@ -17,13 +17,12 @@ async function handleInvoicePdfGeneration(data: { invoiceId: string; tenantId: s
 
   if (!invoice) throw new Error(`Invoice ${invoiceId} not found`)
 
-  const tenant = await db.query.tenants.findFirst({
-    where: eq(tenants.id, tenantId),
+  const settings = await db.query.appSettings.findFirst({
+    where: eq(appSettings.id, 'global'),
   })
 
-  if (!tenant) throw new Error(`Tenant ${tenantId} not found`)
-
-  const htmlContent = generateInvoiceHtml(invoice as unknown as InvoiceViewData, tenant)
+  // We still do tenant cleanup or S3 upload keys on tenantId, so that doesn't break S3 structure
+  const htmlContent = generateInvoiceHtml(invoice as unknown as InvoiceViewData, settings)
   const pdfBuffer = await generatePdf(htmlContent)
   await deleteInvoicePdf(tenantId, invoiceId) // Clean up the old one from S3 before overwriting
   const key = await uploadInvoicePdf(tenantId, invoiceId, pdfBuffer)

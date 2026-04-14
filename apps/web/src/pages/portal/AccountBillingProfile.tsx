@@ -43,8 +43,8 @@ export default function AccountBillingProfile() {
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Billing Identity</h1>
-          <p className="text-muted-foreground">Manage the legal details that appear on your purchases.</p>
+          <h1 className="text-2xl font-bold tracking-tight">Billing Details</h1>
+          <p className="text-muted-foreground">Provide your details to be used as the 'Bill To' on your purchases.</p>
         </div>
       </div>
 
@@ -56,7 +56,7 @@ export default function AccountBillingProfile() {
             </div>
             <div>
               <h3 className="font-semibold text-lg">Billing Details</h3>
-              <p className="text-sm text-muted-foreground mt-2">These details are legally binding. They are stamped onto your downloaded invoices.</p>
+              <p className="text-sm text-muted-foreground mt-2">This information is stamped onto your downloaded invoices as the recipient.</p>
             </div>
           </div>
         </div>
@@ -70,7 +70,7 @@ export default function AccountBillingProfile() {
               </h2>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium">Full Name / Company</label>
+                <label className="text-sm font-medium">Full Name</label>
                 <input 
                   type="text" 
                   value={formData.billingName} 

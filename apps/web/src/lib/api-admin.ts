@@ -108,7 +108,7 @@ export const adminKeys = {
   invoices: () => [...adminKeys.all, 'invoices'] as const,
   users: () => [...adminKeys.all, 'users'] as const,
   userDetail: (id: string) => [...adminKeys.all, 'users', id] as const,
-  tenant: () => [...adminKeys.all, 'tenant'] as const,
+  settings: () => [...adminKeys.all, 'settings'] as const,
 }
 
 export const useAdminStats = () => {
@@ -328,24 +328,25 @@ export const useAdminDeletePaymentMethod = () => {
   })
 }
 
-export const useAdminTenant = () => {
+export const useAdminSettings = () => {
   return useQuery({
-    queryKey: adminKeys.tenant(),
+    queryKey: adminKeys.settings(),
     queryFn: async () => {
-      const { data } = await api.get('/tenants/current')
+      // Points to /api/v1/admin/settings
+      const { data } = await api.get('/admin/settings')
       return data
     }
   })
 }
 
-export const useAdminUpdateTenant = () => {
+export const useAdminUpdateSettings = () => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
-      const { data } = await api.patch('/tenants/current', payload)
+      const { data } = await api.patch('/admin/settings', payload)
       return data
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.tenant() })
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: adminKeys.settings() })
   })
 }
 

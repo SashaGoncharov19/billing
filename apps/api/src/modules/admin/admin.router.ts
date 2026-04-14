@@ -9,6 +9,7 @@ import {
   subscriptions,
   memberships,
   products,
+  appSettings,
 } from '@entityseven/db'
 import { eq, count, sum, desc, isNull } from 'drizzle-orm'
 import { authenticate } from '@api/middleware/authenticate'
@@ -50,6 +51,48 @@ export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.ro
       revenue: revenueRes[0]?.total ?? 0,
     }
   })
+  .get('/settings', async () => {
+    const settings = await db.query.appSettings.findFirst({
+      where: eq(appSettings.id, 'global'),
+    })
+    return settings || { id: 'global' }
+  })
+  .patch(
+    '/settings',
+    async ({ body }) => {
+      const existing = await db.query.appSettings.findFirst({
+        where: eq(appSettings.id, 'global'),
+      })
+
+      if (existing) {
+        const [updated] = await db
+          .update(appSettings)
+          .set({ ...(body as any), updatedAt: new Date() })
+          .where(eq(appSettings.id, 'global'))
+          .returning()
+        return updated
+      } else {
+        const [created] = await db
+          .insert(appSettings)
+          .values({ ...(body as any), id: 'global' })
+          .returning()
+        return created
+      }
+    },
+    {
+      body: t.Object({
+        billingEntity: t.Optional(t.String()),
+        billingAddress: t.Optional(t.String()),
+        billingTaxId: t.Optional(t.String()),
+        billingEmail: t.Optional(t.String()),
+        billingCountry: t.Optional(t.String()),
+        logoUrl: t.Optional(t.String()),
+        primaryColor: t.Optional(t.String()),
+        secondaryColor: t.Optional(t.String()),
+        customCss: t.Optional(t.String()),
+      }),
+    },
+  )
   .get('/tenants', async () => {
     const allTenants = await db.select().from(tenants).orderBy(desc(tenants.createdAt))
     return allTenants

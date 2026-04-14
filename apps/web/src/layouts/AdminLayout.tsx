@@ -1,11 +1,22 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Users, Building, ShieldCheck, Ticket, LogOut, Package, Globe, CreditCard, Receipt, Settings } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Users,
+  ShieldCheck,
+  Ticket,
+  LogOut,
+  Package,
+  Globe,
+  CreditCard,
+  Receipt,
+  Settings,
+} from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '../store/auth.store'
 
 export default function AdminLayout() {
   const location = useLocation()
-  const logout = useAuthStore(s => s.logout)
+  const logout = useAuthStore((s) => s.logout)
 
   const links = [
     { to: '/admin', icon: LayoutDashboard, label: 'Overview' },
@@ -16,7 +27,6 @@ export default function AdminLayout() {
     { to: '/admin/currencies', icon: Globe, label: 'Currencies' },
     { to: '/admin/taxes', icon: Receipt, label: 'Regional Taxes' },
     { to: '/admin/settings', icon: Settings, label: 'Settings' },
-    { to: '/admin/tenants', icon: Building, label: 'Tenants' },
     { to: '/admin/users', icon: Users, label: 'Users' },
     { to: '/admin/audit', icon: ShieldCheck, label: 'Audit Logs' },
   ]
@@ -34,15 +44,13 @@ export default function AdminLayout() {
 
         <nav className="flex-1 px-4 py-6 space-y-1">
           {links.map((link) => {
-            const isActive = location.pathname === link.to || (link.to !== '/admin' && location.pathname.startsWith(link.to))
+            const isActive =
+              location.pathname === link.to ||
+              (link.to !== '/admin' && location.pathname.startsWith(link.to))
             const Icon = link.icon
 
             return (
-              <Link
-                key={link.to}
-                to={link.to}
-                className="block relative"
-              >
+              <Link key={link.to} to={link.to} className="block relative">
                 {isActive && (
                   <motion.div
                     layoutId="admin-active-nav"
@@ -50,8 +58,11 @@ export default function AdminLayout() {
                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                   />
                 )}
-                <div className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive ? 'text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-                  }`}>
+                <div
+                  className={`relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive ? 'text-white' : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                  }`}
+                >
                   <Icon size={18} />
                   {link.label}
                 </div>
@@ -75,7 +86,9 @@ export default function AdminLayout() {
       <div className="flex-1 flex flex-col overflow-hidden bg-background">
         <header className="h-16 border-b border-border/50 bg-card/50 backdrop-blur flex items-center justify-between px-4 md:px-8">
           <div className="md:hidden font-bold flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-brand-primary text-white flex items-center justify-center text-[10px]">ES</div>
+            <div className="w-6 h-6 rounded bg-brand-primary text-white flex items-center justify-center text-[10px]">
+              ES
+            </div>
             Admin
           </div>
           <div className="hidden md:flex text-sm text-muted-foreground font-medium">

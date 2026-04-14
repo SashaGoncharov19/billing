@@ -11,6 +11,7 @@ import {
   users,
   taxRates,
   paymentMethods,
+  appSettings,
 } from '@entityseven/db'
 import { eq, and } from 'drizzle-orm'
 import { authenticate } from '@api/middleware/authenticate'
@@ -96,8 +97,16 @@ export const billingRouter = new Elysia({ prefix: '/billing' })
       }
 
       // Accumulate total
+      interface InvoiceItemInsert {
+        productId: string
+        description: string
+        unitPrice: string
+        totalAmount: string
+        quantity: number
+      }
+
       let totalBaseAmount = 0
-      const invoiceItemsData: any[] = []
+      const invoiceItemsData: InvoiceItemInsert[] = []
 
       for (const item of body.items) {
         const product = await db.query.products.findFirst({
@@ -132,6 +141,16 @@ export const billingRouter = new Elysia({ prefix: '/billing' })
       const taxAmount = totalBaseAmount * appliedTaxRate
       const finalAmount = totalBaseAmount + taxAmount
 
+      const settings = (await db.query.appSettings.findFirst({
+        where: eq(appSettings.id, 'global'),
+      })) || {
+        billingEntity: '',
+        billingAddress: '',
+        billingTaxId: '',
+        billingEmail: '',
+        billingCountry: '',
+      }
+
       const [newInvoice] = await db
         .insert(invoices)
         .values({
@@ -146,14 +165,14 @@ export const billingRouter = new Elysia({ prefix: '/billing' })
           paymentMethod: pm ? pm.name : null,
           createdByUserId: user.id,
           issuerDetails: {
-            name: tenant.billingEntity || tenant.name,
-            address: tenant.billingAddress,
-            taxId: tenant.billingTaxId,
-            email: tenant.billingEmail,
-            country: tenant.billingCountry,
+            name: settings.billingEntity || 'System Provider',
+            address: settings.billingAddress,
+            taxId: settings.billingTaxId,
+            email: settings.billingEmail,
+            country: settings.billingCountry,
           },
           recipientDetails: {
-            name: dbUser.billingName || dbUser.email,
+            name: dbUser.billingName || [dbUser.firstName, dbUser.lastName].filter(Boolean).join(' ') || dbUser.email,
             address: dbUser.billingAddress,
             taxId: dbUser.billingTaxId,
             email: dbUser.billingEmail || dbUser.email,
