@@ -12,7 +12,7 @@ interface AuditOptions {
   userAgent?: string
 }
 
-export async function logAudit(options: AuditOptions, tx?: any): Promise<void> {
+export async function logAudit(options: AuditOptions, tx?: unknown): Promise<void> {
   const client = tx ?? db
   await client.insert(auditLogs).values({
     tenantId: options.tenantId,

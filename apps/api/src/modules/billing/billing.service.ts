@@ -1,5 +1,6 @@
 import { getPaymentProvider } from '@api/providers/provider.factory'
-import { db, tenants, subscriptions, memberships, users } from '@entityseven/db'
+import type { CreateCheckoutSessionData } from '@api/providers/payment-provider.interface'
+import { db, tenants, memberships, users } from '@entityseven/db'
 import { eq, and } from 'drizzle-orm'
 
 export class BillingService {
@@ -88,7 +89,7 @@ export class BillingService {
     }
     const customerId = await this.getCustomerForTenant(tenantId)
 
-    const lineItems: any[] = []
+    const lineItems: NonNullable<CreateCheckoutSessionData['lineItems']> = []
     items.forEach((item) => {
       const product = dbProducts.find((p) => p.id === item.productId)!
       lineItems.push({ priceId: product.stripePriceId!, quantity: item.quantity })
@@ -122,11 +123,35 @@ export class BillingService {
     return this.provider.createPortalSession(customerId, returnUrl)
   }
 
-  async getSubscriptionForTenant(tenantId: string) {
-    const sub = await db.query.subscriptions.findFirst({
-      where: eq(subscriptions.tenantId, tenantId),
+  async createTopUpSession(
+    tenantId: string,
+    amount: number,
+    successUrl: string,
+    cancelUrl: string
+  ) {
+    if (amount <= 0) throw new Error('Amount must be positive')
+    
+    const customerId = await this.getCustomerForTenant(tenantId)
+    
+    const session = await this.provider.createCheckoutSession({
+      tenantId,
+      customerId,
+      lineItems: [
+        {
+          priceData: {
+            currency: 'usd',
+            product_data: { name: 'Account Balance Top-up' },
+            unit_amount: Math.round(amount * 100),
+          },
+          quantity: 1,
+        }
+      ],
+      successUrl,
+      cancelUrl,
+      mode: 'payment',
+      metadata: { tenantId, isTopUp: 'true', topUpAmount: amount.toString() },
     })
 
-    return sub || null
+    return session
   }
 }

@@ -32,7 +32,8 @@ export default function AccountBillingProfile() {
     try {
       await updateMe.mutateAsync(formData)
       toast.success('Billing details updated successfully')
-    } catch(e: any) {
+    } catch(err) {
+      const e = err as { response?: { data?: { message?: string } } }
       toast.error(e.response?.data?.message || 'Failed to update details')
     }
   }

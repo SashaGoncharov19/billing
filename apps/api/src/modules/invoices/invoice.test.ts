@@ -27,7 +27,7 @@ mock.module('@entityseven/db', () => ({
     },
     insert: mockInsert,
     update: mockUpdate,
-    transaction: mock().mockImplementation(async (cb: any) => {
+    transaction: mock().mockImplementation(async (cb: Function) => {
       const txMock = {
         insert: mockInsert,
         update: mockUpdate,

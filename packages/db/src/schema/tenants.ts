@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, varchar, text, timestamp, numeric } from 'drizzle-orm/pg-core'
 
 export const tenants = pgTable('tenants', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -14,6 +14,7 @@ export const tenants = pgTable('tenants', {
   billingTaxId: varchar('billing_tax_id', { length: 100 }),
   billingEmail: varchar('billing_email', { length: 255 }),
   billingCountry: varchar('billing_country', { length: 2 }), // ISO-3166-1 alpha-2
+  accountBalance: numeric('account_balance', { precision: 12, scale: 2 }).default('0').notNull(),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

@@ -27,7 +27,7 @@ class PluginManagerClass {
     pluginType: string,
     tenantId: string,
     subscriptionId: string,
-    config?: any,
+    config?: Record<string, unknown>,
   ) {
     const plugin = this.getPlugin(pluginType)
     if (!plugin) {

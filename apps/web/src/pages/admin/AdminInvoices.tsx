@@ -53,7 +53,7 @@ export default function AdminInvoices() {
     try {
       await markPaid.mutateAsync(id)
       toast.success('Invoice marked as paid!')
-    } catch (e: any) {
+    } catch (err) { const e = err as {response?: {data?: {message?: string}}};
       toast.error(e.response?.data?.message || 'Failed to mark as paid')
     }
   }
@@ -63,7 +63,7 @@ export default function AdminInvoices() {
     try {
       await deleteInvoice.mutateAsync(id)
       toast.success('Invoice deleted successfully')
-    } catch (e: any) {
+    } catch (err) { const e = err as {response?: {data?: {message?: string}}};
       toast.error('Failed to delete invoice')
     }
   }

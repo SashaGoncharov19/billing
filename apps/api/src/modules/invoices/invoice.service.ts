@@ -15,7 +15,7 @@ export class InvoiceService {
   async createInvoice(
     tenantId: string,
     userId: string,
-    data: { currency?: string; dueAt?: string; notes?: string; items: any[] },
+    data: { currency?: string; dueAt?: string; notes?: string; items: import('@entityseven/db').InvoiceItem[] },
   ) {
     if (!data.items || data.items.length === 0) {
       throw new Error('Invoice must have at least 1 item')

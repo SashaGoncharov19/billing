@@ -16,6 +16,7 @@ export interface Tenant {
   primaryColor?: string | null
   secondaryColor?: string | null
   logoUrl?: string | null
+  accountBalance?: string | number
 }
 
 interface AuthState {

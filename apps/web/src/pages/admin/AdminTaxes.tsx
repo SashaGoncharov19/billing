@@ -22,7 +22,7 @@ export default function AdminTaxes() {
       toast.success('Tax rate added successfully')
       setCountryCode('')
       setTaxRate('')
-    } catch (e: any) {
+    } catch (err) { const e = err as {response?: {data?: {message?: string}}};
       toast.error(e.response?.data?.message || 'Failed to add tax rate')
     } finally {
       setIsSubmitting(false)
@@ -34,7 +34,7 @@ export default function AdminTaxes() {
     try {
       await deleteTax.mutateAsync(id)
       toast.success('Tax rate deleted')
-    } catch (e: any) {
+    } catch (err) { const e = err as {response?: {data?: {message?: string}}};
       toast.error('Failed to delete tax rate')
     }
   }

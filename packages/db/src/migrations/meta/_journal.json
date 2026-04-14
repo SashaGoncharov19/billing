@@ -71,6 +71,13 @@
       "when": 1776187036195,
       "tag": "0009_long_the_hunter",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1776190668592,
+      "tag": "0010_lovely_vector",
+      "breakpoints": true
     }
   ]
 }

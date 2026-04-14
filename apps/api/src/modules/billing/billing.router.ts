@@ -45,9 +45,25 @@ export const billingRouter = new Elysia({ prefix: '/billing' })
     },
     { body: PortalDto },
   )
-  .get('/subscription', async ({ tenant, billingService }) => {
-    return billingService.getSubscriptionForTenant(tenant.id)
-  })
+  .post(
+    '/topup',
+    async ({ body, tenant, billingService }) => {
+      const session = await billingService.createTopUpSession(
+        tenant.id,
+        body.amount,
+        body.successUrl,
+        body.cancelUrl
+      )
+      return { url: session.url }
+    },
+    {
+      body: t.Object({
+        amount: t.Numeric(),
+        successUrl: t.String(),
+        cancelUrl: t.String(),
+      }),
+    }
+  )
   .post(
     '/manual-checkout',
     async ({ request, body, tenant, user }) => {

@@ -6,7 +6,7 @@ import {
   auditLogs,
   invoices,
   tickets,
-  subscriptions,
+  services,
   memberships,
   products,
   appSettings,
@@ -37,8 +37,8 @@ export const adminRouter = new Elysia({ prefix: '/api/v1/admin', name: 'admin.ro
       .where(eq(tickets.status, 'open'))
     const activeSubsRes = await db
       .select({ count: count() })
-      .from(subscriptions)
-      .where(eq(subscriptions.status, 'active'))
+      .from(services)
+      .where(eq(services.status, 'active'))
     const revenueRes = await db
       .select({ total: sum(invoices.totalAmount) })
       .from(invoices)

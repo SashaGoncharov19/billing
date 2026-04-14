@@ -74,7 +74,7 @@ export default function AdminUserDetail() {
             </h3>
             {memberships?.length > 0 ? (
               <div className="space-y-3">
-                {memberships.map((m: any) => (
+                {memberships.map((m) => (
                   <div key={m.id} className="flex justify-between items-center p-3 border rounded-lg bg-muted/20">
                     <div>
                       <div className="font-medium">Tenant: {m.tenant?.name || m.tenantId}</div>
@@ -108,7 +108,7 @@ export default function AdminUserDetail() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {invoices.map((inv: any) => (
+                    {invoices.map((inv) => (
                       <tr key={inv.id}>
                         <td className="px-4 py-3 font-medium">#{inv.number}</td>
                         <td className="px-4 py-3">{Number(inv.totalAmount).toLocaleString('en-US',{style:'currency',currency:inv.currency})}</td>
@@ -137,7 +137,7 @@ export default function AdminUserDetail() {
             </h3>
             {tickets?.length > 0 ? (
               <div className="space-y-3">
-                {tickets.map((t: any) => (
+                {tickets.map((t) => (
                   <div key={t.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg bg-muted/20 gap-2">
                     <div>
                       <Link to={`/admin/tickets/${t.id}`} className="font-medium text-primary hover:underline block">{t.subject}</Link>

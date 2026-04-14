@@ -81,7 +81,7 @@ export interface Invoice {
   paidAt?: string
   voidedAt?: string
   createdAt: string
-  items?: any[]
+  items?: unknown[]
 }
 
 export interface Tenant {

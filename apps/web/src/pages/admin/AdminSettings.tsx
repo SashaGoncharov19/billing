@@ -32,7 +32,7 @@ export default function AdminSettings() {
     try {
       await updateSettings.mutateAsync(formData)
       toast.success('Invoicing settings saved successfully')
-    } catch(e: any) {
+    } catch (err) { const e = err as {response?: {data?: {message?: string}}};
       toast.error(e.response?.data?.message || 'Failed to save settings')
     }
   }

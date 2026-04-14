@@ -77,7 +77,7 @@ export default function Checkout() {
             clearCart() // empty cart if we successfully leave to Stripe
             window.location.href = response.url
         }
-      } catch (e: any) {
+      } catch (err) { const e = err as {response?: {data?: {message?: string}}};
         if (e.response?.data?.error === 'COUNTRY_MISMATCH') {
             setCheckoutError(e.response.data.message)
         } else {
@@ -101,7 +101,7 @@ export default function Checkout() {
             clearCart()
             navigate('/dashboard?checkout=manual_pending')
          }
-       } catch(e: any) {
+       } catch (err) { const e = err as {response?: {data?: {message?: string}}};
          if (e.response?.data?.error === 'COUNTRY_MISMATCH') {
             setCheckoutError(e.response.data.message)
          } else {

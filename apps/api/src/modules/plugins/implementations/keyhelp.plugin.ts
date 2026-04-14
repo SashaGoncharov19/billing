@@ -1,5 +1,5 @@
 import type { BasePlugin } from '../plugin.interface'
-import { db, memberships, users, subscriptions } from '@entityseven/db'
+import { db, memberships, users, services } from '@entityseven/db'
 import { eq, and } from 'drizzle-orm'
 import { emailQueue } from '@api/queue'
 import { randomBytes } from 'node:crypto'
@@ -21,7 +21,7 @@ export class KeyhelpPlugin implements BasePlugin {
     )
   }
 
-  private async fetchKeyhelp(endpoint: string, method: string, body?: any) {
+  private async fetchKeyhelp(endpoint: string, method: string, body?: Record<string, unknown> | null) {
     const { apiUrl, apiKey } = this.getApiConfig()
 
     const requestInit: RequestInit = {
@@ -97,14 +97,14 @@ export class KeyhelpPlugin implements BasePlugin {
 
     // Save metadata
     await db
-      .update(subscriptions)
+      .update(services)
       .set({
-        providerData: {
+        pluginData: {
           keyhelpClientId: clientId,
           username,
         },
       })
-      .where(eq(subscriptions.id, subscriptionId))
+      .where(eq(services.id, subscriptionId))
 
     // Queue email
     const subject = 'Your Web Hosting Account is Ready!'
@@ -134,12 +134,12 @@ Please log in and change your password as soon as possible!
   async onSuspend(tenantId: string, subscriptionId: string): Promise<void> {
     console.log(`[Plugin:KeyHelp] SUSPEND called for Tenant ${tenantId}, Sub ${subscriptionId}`)
 
-    const sub = await db.query.subscriptions.findFirst({
-      where: eq(subscriptions.id, subscriptionId),
+    const sub = await db.query.services.findFirst({
+      where: eq(services.id, subscriptionId),
     })
 
-    const providerData = sub?.providerData as any
-    const clientId = providerData?.keyhelpClientId
+    const pluginData = sub?.pluginData as any
+    const clientId = pluginData?.keyhelpClientId
 
     if (!clientId) {
       console.error(
@@ -157,12 +157,12 @@ Please log in and change your password as soon as possible!
   async onReactivate(tenantId: string, subscriptionId: string): Promise<void> {
     console.log(`[Plugin:KeyHelp] REACTIVATE called for Sub ${subscriptionId}`)
 
-    const sub = await db.query.subscriptions.findFirst({
-      where: eq(subscriptions.id, subscriptionId),
+    const sub = await db.query.services.findFirst({
+      where: eq(services.id, subscriptionId),
     })
 
-    const providerData = sub?.providerData as any
-    const clientId = providerData?.keyhelpClientId
+    const pluginData = sub?.pluginData as any
+    const clientId = pluginData?.keyhelpClientId
 
     if (!clientId) {
       console.error(
@@ -180,12 +180,12 @@ Please log in and change your password as soon as possible!
   async onTerminate(tenantId: string, subscriptionId: string): Promise<void> {
     console.log(`[Plugin:KeyHelp] TERMINATE called for Sub ${subscriptionId}`)
 
-    const sub = await db.query.subscriptions.findFirst({
-      where: eq(subscriptions.id, subscriptionId),
+    const sub = await db.query.services.findFirst({
+      where: eq(services.id, subscriptionId),
     })
 
-    const providerData = sub?.providerData as any
-    const clientId = providerData?.keyhelpClientId
+    const pluginData = sub?.pluginData as any
+    const clientId = pluginData?.keyhelpClientId
 
     if (!clientId) {
       console.error(`[Plugin:KeyHelp] Cannot terminate: No keyhelpClientId found`)
@@ -202,7 +202,7 @@ Please log in and change your password as soon as possible!
       // Keyhelp typically returns an array of plans or { data: [...] }
       const plans = Array.isArray(response) ? response : response?.data || []
 
-      return plans.map((plan: any) => ({
+      return plans.map((plan: Record<string, unknown>) => ({
         id: plan.id,
         name: plan.name || `Plan ${plan.id}`,
       }))

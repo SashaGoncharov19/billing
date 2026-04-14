@@ -1,4 +1,4 @@
-import { db, subscriptions, payments, invoices, tenants, products } from '@entityseven/db'
+import { db, services, payments, invoices, tenants, products, balanceLogs } from '@entityseven/db'
 import { eq } from 'drizzle-orm'
 import { PluginManager } from '@api/modules/plugins/plugin.manager'
 import type { WebhookEvent } from '../payment-provider.interface'
@@ -30,18 +30,6 @@ export async function handleWebhookEvent(event: WebhookEvent) {
     case 'payment.failed':
       await handlePaymentFailed(event)
       break
-    case 'subscription.updated':
-    case 'subscription.created':
-    case 'subscription.canceled':
-      await handleSubscriptionUpdated(event)
-      break
-    case 'invoice.paid':
-      await handleInvoicePaid(event)
-      break
-    case 'invoice.payment_failed':
-      await handleInvoicePaymentFailed(event)
-      break
-    default:
       console.log(`Unhandled webhook event type: ${event.type}`)
   }
 }
@@ -49,10 +37,10 @@ export async function handleWebhookEvent(event: WebhookEvent) {
 async function handleCheckoutCompleted(event: WebhookEvent) {
   const eventData = WebhookDataSchema.parse(event.data)
   const customerId = eventData.customer
-  const subscriptionId = eventData.subscription
-  const productId = eventData.metadata?.productId as string | undefined
+  const isTopUp = eventData.metadata?.isTopUp === 'true'
+  const topUpAmountStr = eventData.metadata?.topUpAmount
 
-  if (!customerId || !subscriptionId) return
+  if (!customerId) return
 
   const tenant = await db.query.tenants.findFirst({
     where: eq(tenants.stripeCustomerId, customerId),
@@ -63,44 +51,29 @@ async function handleCheckoutCompleted(event: WebhookEvent) {
     return
   }
 
-  const existingSub = await db.query.subscriptions.findFirst({
-    where: eq(subscriptions.providerSubscriptionId, subscriptionId),
-  })
-
-  if (!existingSub) {
-    const newSubs = await db
-      .insert(subscriptions)
-      .values({
+  if (isTopUp && topUpAmountStr) {
+    const amount = Number(topUpAmountStr)
+    const newBalance = Number(tenant.accountBalance) + amount
+    
+    await db.transaction(async (tx) => {
+      await tx.update(tenants).set({ accountBalance: newBalance.toFixed(2) }).where(eq(tenants.id, tenant.id))
+      
+      await tx.insert(balanceLogs).values({
         tenantId: tenant.id,
-        productId: productId || null,
-        provider: 'stripe',
-        providerSubscriptionId: subscriptionId,
-        status: 'active',
+        amount: amount.toFixed(2),
+        balanceAfter: newBalance.toFixed(2),
+        type: 'top_up',
+        referenceId: eventData.id,
+        description: `Account top-up via Stripe`,
       })
-      .returning()
+    })
 
-    const newSub = newSubs[0]
-
-    if (productId && newSub) {
-      const product = await db.query.products.findFirst({ where: eq(products.id, productId) })
-      if (product?.pluginType) {
-        console.log(
-          `[PluginManager] Triggering provision for product ${productId} with plugin ${product.pluginType}`,
-        )
-        await PluginManager.dispatch(
-          'provision',
-          product.pluginType,
-          tenant.id,
-          newSub.id,
-          product.pluginConfig,
-        )
-      }
-    }
+    console.log(`[WEBHOOK] Processed balance top-up for tenant ${tenant.id}. Added $${amount}`)
+    return
   }
-
-  console.log(`[WEBHOOK] Processed checkout.completed for tenant ${tenant.id}`)
 }
 
+// Payment Intent Handlers
 async function handlePaymentSucceeded(event: WebhookEvent) {
   const eventData = WebhookDataSchema.parse(event.data)
   const providerPaymentId = eventData.payment_intent
@@ -134,51 +107,5 @@ async function handlePaymentFailed(event: WebhookEvent) {
       .update(payments)
       .set({ status: 'failed' })
       .where(eq(payments.providerPaymentId, providerPaymentId))
-  })
-}
-
-async function handleSubscriptionUpdated(event: WebhookEvent) {
-  const eventData = WebhookDataSchema.parse(event.data)
-  const providerSubscriptionId = eventData.id
-  const status = eventData.status
-  const currentPeriodEndNum = eventData.current_period_end
-
-  if (!providerSubscriptionId || !status || !currentPeriodEndNum) return
-
-  await db.transaction(async (tx) => {
-    await tx
-      .update(subscriptions)
-      .set({
-        status: status,
-        currentPeriodEnd: new Date(currentPeriodEndNum * 1000),
-        cancelAtPeriodEnd: eventData.cancel_at_period_end ?? false,
-      })
-      .where(eq(subscriptions.providerSubscriptionId, providerSubscriptionId))
-  })
-}
-
-async function handleInvoicePaid(event: WebhookEvent) {
-  const eventData = WebhookDataSchema.parse(event.data)
-  const subscriptionId = eventData.subscription
-  if (!subscriptionId) return
-
-  await db.transaction(async (tx) => {
-    await tx
-      .update(subscriptions)
-      .set({ status: 'active' })
-      .where(eq(subscriptions.providerSubscriptionId, subscriptionId))
-  })
-}
-
-async function handleInvoicePaymentFailed(event: WebhookEvent) {
-  const eventData = WebhookDataSchema.parse(event.data)
-  const subscriptionId = eventData.subscription
-  if (!subscriptionId) return
-
-  await db.transaction(async (tx) => {
-    await tx
-      .update(subscriptions)
-      .set({ status: 'past_due' })
-      .where(eq(subscriptions.providerSubscriptionId, subscriptionId))
   })
 }

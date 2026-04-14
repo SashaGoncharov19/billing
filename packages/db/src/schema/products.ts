@@ -1,8 +1,8 @@
 import { pgTable, uuid, varchar, numeric, timestamp, pgEnum, index, boolean, jsonb } from 'drizzle-orm/pg-core'
 import { tenants } from './tenants'
 
-export const billingTypeEnum = pgEnum('billing_type', ['one_time', 'recurring'])
-export const billingIntervalEnum = pgEnum('billing_interval', ['month', 'year'])
+export const billingTypeEnum = pgEnum('billing_type', ['one_time', 'recurring', 'metered'])
+export const billingIntervalEnum = pgEnum('billing_interval', ['hourly', 'month', 'year'])
 
 export const products = pgTable('products', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -13,7 +13,7 @@ export const products = pgTable('products', {
   setupFee: numeric('setup_fee', { precision: 12, scale: 2 }).default('0'),
   currency: varchar('currency', { length: 3 }).default('USD').notNull(),
   billingType: billingTypeEnum('billing_type').default('one_time').notNull(),
-  billingInterval: billingIntervalEnum('billing_interval'),  // null for one_time
+  billingInterval: billingIntervalEnum('billing_interval'),  // 'hourly', 'month', 'year', or null
   stripeProductId: varchar('stripe_product_id', { length: 255 }),
   stripePriceId: varchar('stripe_price_id', { length: 255 }),
   pluginType: varchar('plugin_type', { length: 100 }), // e.g., 'keyhelp'

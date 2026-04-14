@@ -1,7 +1,7 @@
 import { Worker } from 'bullmq'
 import { bullMqConnection } from '../client'
 import { schedulerQueue } from '../index'
-import { db, tickets, idempotencyKeys, currencies } from '@entityseven/db'
+import { db, tickets, idempotencyKeys, currencies, services, tenants, balanceLogs } from '@entityseven/db'
 import { and, eq, lte, ne } from 'drizzle-orm'
 
 // Register cron jobs once
@@ -30,6 +30,15 @@ export async function initScheduler() {
     {
       repeat: { pattern: '0 * * * *' }, // Hourly
       jobId: 'update-exchange-rates',
+    },
+  )
+
+  await schedulerQueue.add(
+    'hourly-service-metering',
+    {},
+    {
+      repeat: { pattern: '0 * * * *' }, // Hourly
+      jobId: 'hourly-service-metering',
     },
   )
 }
@@ -96,6 +105,53 @@ async function updateExchangeRates() {
   }
 }
 
+async function runHourlyServiceMetering() {
+  console.log(`[SCHEDULER] Running hourly service metering...`)
+  try {
+    const activeServices = await db.query.services.findMany({
+      where: eq(services.status, 'active')
+    })
+
+    for (const service of activeServices) {
+      const hourlyPrice = Number(service.hourlyPrice)
+      if (hourlyPrice <= 0) continue
+
+      await db.transaction(async tx => {
+        const tenant = await tx.query.tenants.findFirst({ where: eq(tenants.id, service.tenantId) })
+        if (!tenant) return
+
+        let currentBalance = Number(tenant.accountBalance)
+        let deduction = hourlyPrice
+
+        // If balance hits zero, we should maybe suspend
+        // Easiest is to deduct and check if < 0.
+        let newBalance = currentBalance - deduction
+        
+        await tx.update(tenants).set({ accountBalance: newBalance.toFixed(2) }).where(eq(tenants.id, tenant.id))
+        
+        await tx.insert(balanceLogs).values({
+          tenantId: tenant.id,
+          amount: (-deduction).toFixed(4),
+          balanceAfter: newBalance.toFixed(2),
+          type: 'hourly_usage',
+          referenceId: service.id,
+          description: `Hourly active usage charge for ${service.name}`,
+        })
+        
+        // Update last billed at so if they delete it, fraction is correct
+        await tx.update(services).set({ lastBilledAt: new Date() }).where(eq(services.id, service.id))
+
+        if (newBalance < 0) {
+          console.log(`[METERING] Tenant ${tenant.id} balance below 0. Suspending service ${service.id}`)
+          await tx.update(services).set({ status: 'suspended' }).where(eq(services.id, service.id))
+        }
+      })
+    }
+  } catch(error) {
+    console.error(`[SCHEDULER] Failed hourly metering:`, error)
+  }
+}
+
 const schedulerWorker = new Worker(
   'scheduler',
   async (job) => {
@@ -110,6 +166,9 @@ const schedulerWorker = new Worker(
         break
       case 'update-exchange-rates':
         await updateExchangeRates()
+        break
+      case 'hourly-service-metering':
+        await runHourlyServiceMetering()
         break
       default:
         console.error(`Unknown scheduler job: ${job.name}`)

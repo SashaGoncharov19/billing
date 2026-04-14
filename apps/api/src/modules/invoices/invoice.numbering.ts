@@ -1,7 +1,7 @@
 import { eq, desc, and, isNotNull } from 'drizzle-orm'
 import { invoices } from '@entityseven/db'
 
-export async function getNextInvoiceNumber(tenantId: string, tx: any): Promise<number> {
+export async function getNextInvoiceNumber(tenantId: string, tx: any /* TODO: FIX */): Promise<number> {
   const result = await tx
     .select({ maxNumber: invoices.number })
     .from(invoices)

@@ -7,7 +7,7 @@ export default function AdminUsersList() {
   const { data: users, isLoading } = useAdminUsers()
   const [search, setSearch] = useState('')
 
-  const filteredUsers = users?.filter((u: any) => 
+  const filteredUsers = users?.filter((u) => 
     u.email?.toLowerCase().includes(search.toLowerCase()) || 
     u.id.includes(search)
   )
@@ -50,7 +50,7 @@ export default function AdminUsersList() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
-              {filteredUsers?.map((u: any) => (
+              {filteredUsers?.map((u) => (
                 <tr key={u.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-6 py-4">
                     <div className="font-medium text-foreground">{u.email}</div>
